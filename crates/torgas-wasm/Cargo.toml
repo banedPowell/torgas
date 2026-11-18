@@ -1,0 +1,25 @@
+[package]
+name = "torgas-wasm"
+description = "Bindings WebAssembly de torgas-core pour la version web de Torgas."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+torgas-core.workspace = true
+serde.workspace = true
+wasm-bindgen.workspace = true
+serde-wasm-bindgen.workspace = true
+console_error_panic_hook.workspace = true
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Os", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
+
+[lints]
+workspace = true
