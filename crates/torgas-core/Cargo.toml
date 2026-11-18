@@ -1,0 +1,32 @@
+[package]
+name = "torgas-core"
+description = "Cœur de Torgas : analyse EPUB/CBZ, miniatures, schéma et bibliothèque SQLite."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+# Bibliothèque SQLite native (rusqlite), utilisée par la coquille Tauri.
+sqlite = ["dep:rusqlite", "dep:uuid", "dep:serde_json"]
+
+[dependencies]
+thiserror.workspace = true
+serde.workspace = true
+sha2.workspace = true
+zip.workspace = true
+quick-xml.workspace = true
+image.workspace = true
+rusqlite = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json.workspace = true
+ts-rs.workspace = true
+
+[lints]
+workspace = true
