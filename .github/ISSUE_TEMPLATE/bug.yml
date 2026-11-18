@@ -1,0 +1,32 @@
+name: Bug
+description: Quelque chose ne marche pas comme prévu.
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Ce qui se passe
+      description: Ce que tu as fait, ce que tu attendais, ce qui s'est passé.
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Étapes pour reproduire
+      placeholder: "1. Importer un CBZ de 150 Mo\n2. Ouvrir le lecteur\n3. …"
+    validations: { required: true }
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Plateforme
+      multiple: true
+      options: [Web, macOS, Windows, Linux, iOS, Android]
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Version ou commit
+  - type: textarea
+    id: logs
+    attributes:
+      label: Journaux, captures
+      render: text

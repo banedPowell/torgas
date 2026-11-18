@@ -1,0 +1,15 @@
+name: Tâche
+description: Une tâche technique (refactor, chore, docs, CI).
+labels: ["type: chore"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte
+    validations: { required: true }
+  - type: textarea
+    id: todo
+    attributes:
+      label: À faire
+      placeholder: "- [ ] …"
+    validations: { required: true }

@@ -28,3 +28,7 @@ playwright-report/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Claude Code
+.claude/worktrees/
+.claude/settings.local.json
