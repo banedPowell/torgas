@@ -1,0 +1,30 @@
+# Node / Nuxt
+node_modules/
+.nuxt/
+.output/
+.data/
+.nitro/
+.cache/
+dist/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+
+# Rust
+target/
+crates/torgas-wasm/pkg/
+
+# Tauri
+src-tauri/gen/schemas/
+
+# Tests
+test-results/
+playwright-report/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
