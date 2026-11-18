@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Présence du workspace Rust
+        id: has
+        run: echo "rust=$([ -f Cargo.toml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Dépendances système (Tauri)
+        if: steps.has.outputs.rust == 'true' && hashFiles('src-tauri/Cargo.toml') != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+      - name: Toolchain
+        if: steps.has.outputs.rust == 'true'
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        if: steps.has.outputs.rust == 'true'
+      - name: Format
+        if: steps.has.outputs.rust == 'true'
+        run: cargo fmt --all --check
+      - name: Clippy
+        if: steps.has.outputs.rust == 'true'
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Tests
+        if: steps.has.outputs.rust == 'true'
+        run: cargo test --workspace --all-features
+      - uses: jetli/wasm-pack-action@0d096b08b4e5a7de8c28de67e11e945404e9eefa # v0.4.0
+        if: steps.has.outputs.rust == 'true' && hashFiles('crates/torgas-wasm/Cargo.toml') != ''
+      - name: Build WebAssembly
+        if: steps.has.outputs.rust == 'true' && hashFiles('crates/torgas-wasm/Cargo.toml') != ''
+        run: wasm-pack build crates/torgas-wasm --target web --release
+
+  app:
+    name: App
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Présence de l'app
+        id: has
+        run: echo "app=$([ -f app/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        if: steps.has.outputs.app == 'true'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.has.outputs.app == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Installation
+        if: steps.has.outputs.app == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        if: steps.has.outputs.app == 'true'
+        run: pnpm lint
+      - name: Typecheck
+        if: steps.has.outputs.app == 'true'
+        run: pnpm typecheck
+      - name: Tests
+        if: steps.has.outputs.app == 'true'
+        run: pnpm test
+      - name: Build web
+        if: steps.has.outputs.app == 'true'
+        run: pnpm generate

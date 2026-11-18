@@ -1,0 +1,27 @@
+name: Fonctionnalité
+description: Proposer une fonctionnalité ou une amélioration.
+labels: ["type: feature", "status: à discuter"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Le besoin
+      description: Quel problème de lecteur cela règle ?
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposition
+    validations: { required: true }
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères d'acceptation
+      placeholder: "- [ ] …"
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Cadre
+      options:
+        - label: Ne fournit ni ne pré-configure aucune source tierce de contenu.
+          required: true
