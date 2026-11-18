@@ -1,0 +1,99 @@
+{
+  "app": {
+    "name": "Torgas",
+    "tagline": "Lecteur universel local-first"
+  },
+  "nav": {
+    "main": "Navigation principale",
+    "library": "Bibliothèque",
+    "colorMode": "Basculer le thème clair ou sombre"
+  },
+  "format": {
+    "epub": "EPUB",
+    "cbz": "CBZ"
+  },
+  "status": {
+    "all": "Tout",
+    "reading": "En cours",
+    "to_read": "À lire",
+    "finished": "Terminé",
+    "paused": "En pause",
+    "abandoned": "Abandonné"
+  },
+  "library": {
+    "title": "Bibliothèque",
+    "count": "{n} œuvre | {n} œuvres",
+    "import": "Importer",
+    "importLabel": "Importer des œuvres",
+    "importSoon": "L'import par glisser-déposer arrive à la prochaine étape.",
+    "search": {
+      "label": "Rechercher dans la bibliothèque",
+      "placeholder": "Titre, auteur, série"
+    },
+    "statusFilter": "Filtrer par statut",
+    "formatFilter": {
+      "label": "Filtrer par support",
+      "all": "Support : tous",
+      "epub": "Support : EPUB",
+      "cbz": "Support : CBZ"
+    },
+    "sort": {
+      "label": "Trier",
+      "lastRead": "Récemment lus",
+      "added": "Récemment ajoutés",
+      "title": "Titre (A → Z)"
+    },
+    "view": {
+      "label": "Affichage",
+      "grid": "Vue grille",
+      "list": "Vue liste"
+    },
+    "entry": {
+      "seriesBadge": "{format} · série",
+      "volumes": "{read} / {total} vol.",
+      "unknownAuthor": "Auteur inconnu",
+      "progress": "Progression : {percent}"
+    },
+    "empty": {
+      "title": "Ta bibliothèque est vide",
+      "description": "Importe tes EPUB et CBZ pour commencer. Tout reste sur ton appareil."
+    },
+    "noResults": {
+      "title": "Aucune œuvre ne correspond",
+      "description": "Essaie un autre mot ou retire des filtres.",
+      "action": "Effacer les filtres"
+    },
+    "error": {
+      "title": "Impossible de charger la bibliothèque",
+      "description": "Le cœur de lecture n'a pas répondu ({message}).",
+      "action": "Réessayer"
+    },
+    "loading": "Chargement de la bibliothèque"
+  },
+  "resume": {
+    "label": "Reprendre",
+    "action": "Reprendre la lecture de {title}"
+  },
+  "work": {
+    "back": "Retour à la bibliothèque",
+    "notFound": {
+      "title": "Œuvre introuvable",
+      "description": "Elle a peut-être été retirée de ta bibliothèque."
+    },
+    "soon": {
+      "title": "Fiche en préparation",
+      "description": "Métadonnées, statut et volumes arrivent avec la fiche œuvre."
+    },
+    "read": "Lire"
+  },
+  "reader": {
+    "close": "Quitter le lecteur",
+    "soon": {
+      "title": "Lecteur en préparation",
+      "description": "Les lecteurs EPUB et manga arrivent aux prochaines étapes."
+    }
+  },
+  "cover": {
+    "alt": "Couverture de {title}"
+  }
+}
