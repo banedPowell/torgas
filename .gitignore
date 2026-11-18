@@ -32,3 +32,6 @@ playwright-report/
 # Claude Code
 .claude/worktrees/
 .claude/settings.local.json
+
+# Lien créé par nuxt generate
+/app/dist
