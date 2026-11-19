@@ -50,8 +50,8 @@ describe('useImport', () => {
     expect(importer.progress.value).toBe(1)
     expect(importer.done.value).toBe(4)
     expect(importer.total.value).toBe(4)
-    expect(toast.add).toHaveBeenCalledOnce()
-    expect(toast.add.mock.calls[0]![0].title).toBe('2 œuvres importées')
+    // Pas de toast : le panneau d'import montre déjà le résultat.
+    expect(toast.add).not.toHaveBeenCalled()
     // La bibliothèque est rechargée après l'import.
     expect(useLibrary().works.value).toHaveLength(2)
   })
@@ -100,7 +100,6 @@ describe('useImport', () => {
     expect(importer.items.value.map((i) => i.state)).toEqual(['imported', 'cancelled', 'cancelled'])
     expect(core.importFile).toHaveBeenCalledOnce()
     expect(importer.total.value).toBe(1)
-    expect(toast.add.mock.calls[0]![0].title).toBe('1 œuvre importée')
 
     importer.clear()
     expect(importer.items.value).toHaveLength(0)
@@ -117,7 +116,7 @@ describe('useImport', () => {
     expect(importer.items.value[1]?.state).toBe('imported')
   })
 
-  it('n’affiche pas de toast si rien n’a été importé', async () => {
+  it('n’affiche jamais de toast', async () => {
     const importer = useImport()
     await importer.add([file('notes.txt')])
     expect(importer.items.value[0]?.state).toBe('unsupported')

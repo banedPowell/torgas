@@ -29,10 +29,6 @@ export function useEntryActions() {
     try {
       await core.setStatus(work.id, status)
       await library.load()
-      toast.add({
-        title: t('work.status.updated', { status: t(`status.${status}`) }),
-        icon: 'i-lucide-circle-check',
-      })
     } catch {
       toast.add({ title: t('work.status.error'), icon: 'i-lucide-circle-alert', color: 'error' })
     }

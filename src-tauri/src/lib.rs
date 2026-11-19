@@ -90,6 +90,7 @@ pub fn run() {
             commands::delete_works,
             commands::get_book_bytes,
             commands::get_page_count,
+            commands::get_volume_chapters,
             commands::get_locator,
             commands::save_locator,
             commands::list_bookmarks,

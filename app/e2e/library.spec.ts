@@ -172,9 +172,6 @@ test.describe('Supprimer un ouvrage', () => {
 
     // Retour à la bibliothèque, vide ; la suppression tient au rechargement (OPFS + SQLite).
     await expect(page).toHaveURL(/\/$/)
-    await expect(
-      page.getByText(`« ${EPUB_TITLE} » supprimé de la bibliothèque`, { exact: true }),
-    ).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Ta bibliothèque est vide' })).toBeVisible()
     await page.reload()
     await expect(page.getByRole('heading', { name: 'Ta bibliothèque est vide' })).toBeVisible()
@@ -200,9 +197,6 @@ test.describe('Supprimer un ouvrage', () => {
 
     const dialog = page.getByRole('dialog', { name: 'Supprimer 2 ouvrages ?' })
     await dialog.getByRole('button', { name: 'Supprimer les 2' }).click()
-    await expect(
-      page.getByText('2 ouvrages supprimés de la bibliothèque', { exact: true }),
-    ).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Ta bibliothèque est vide' })).toBeVisible()
     await expect(toolbar).toBeHidden()
   })

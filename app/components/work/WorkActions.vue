@@ -36,7 +36,7 @@ const icon = computed(() =>
 
 <template>
   <UButton
-    :to="`/read/${workId}`"
+    :to="readPath({ id: workId })"
     :icon="icon"
     size="xl"
     block

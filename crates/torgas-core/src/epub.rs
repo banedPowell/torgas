@@ -275,7 +275,9 @@ fn is_comic_subject(subject: &str) -> bool {
 }
 
 /// Une section XHTML est-elle une page-image : une seule image (`img` ou `image` SVG) dans
-/// le corps, et (presque) pas de texte ? Un document illisible n'en est pas une.
+/// le corps, et (presque) pas de texte ? La même image répétée compte une fois : la « vue
+/// par cases » Kindle (KCC) la reprend pour chaque case agrandie. Un document illisible
+/// n'en est pas une.
 fn is_image_page(path: &str, xhtml: &str) -> bool {
     let Ok(elements) = xml::parse(path, xhtml) else {
         return false;
@@ -284,16 +286,22 @@ fn is_image_page(path: &str, xhtml: &str) -> bool {
         .iter()
         .filter(|e| e.is_inside("body") && !e.is_inside("script") && !e.is_inside("style"))
         .collect();
-    let images = body
+    let mut sources: Vec<&str> = body
         .iter()
-        .filter(|e| e.name == "img" || e.name == "image")
-        .count();
+        .filter_map(|e| match e.name.as_str() {
+            "img" => Some(e.attr("src").unwrap_or_default()),
+            "image" => Some(e.attr("href").unwrap_or_default()),
+            _ => None,
+        })
+        .collect();
+    sources.sort_unstable();
+    sources.dedup();
     let text: usize = body
         .iter()
         .filter(|e| e.name != "script" && e.name != "style")
         .map(|e| e.text.chars().filter(|c| !c.is_whitespace()).count())
         .sum();
-    images == 1 && text <= 40
+    sources.len() == 1 && text <= 40
 }
 
 /// Rassemble les indices « manga/BD » d'un EPUB : métadonnées de l'OPF, sens du spine et
@@ -521,6 +529,28 @@ mod tests {
                 "OEBPS/images/p4.jpg"
             ]
         );
+    }
+
+    #[test]
+    fn kindle_panel_view_repeats_the_page_image() {
+        // KCC : l'image de la page, puis la même image une fois par case agrandie.
+        let xhtml = r#"<html xmlns="http://www.w3.org/1999/xhtml"><body>
+            <div><img src="../Images/p1.jpg"/></div>
+            <div id="PV"><div id="PV-TL"><a class="app-amzn-magnify"></a></div></div>
+            <div class="PV-P" id="PV-TL-P"><img src="../Images/p1.jpg"/></div>
+            <div class="PV-P" id="PV-TR-P"><img src="../Images/p1.jpg"/></div>
+            </body></html>"#;
+        assert!(is_image_page("OEBPS/Text/p1.xhtml", xhtml));
+        assert_eq!(
+            section_image("OEBPS/Text/p1.xhtml", xhtml).as_deref(),
+            Some("../Images/p1.jpg")
+        );
+        let two = xhtml.replacen(
+            "PV-TR-P\"><img src=\"../Images/p1.jpg",
+            "PV-TR-P\"><img src=\"../Images/p2.jpg",
+            1,
+        );
+        assert!(!is_image_page("OEBPS/Text/p1.xhtml", &two));
     }
 
     #[test]

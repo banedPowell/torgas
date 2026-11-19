@@ -7,6 +7,7 @@ import type {
   ReadingDirection,
   ReadingStatus,
   Series,
+  VolumeChapter,
   Work,
 } from '~/types/core'
 import { statusAfterProgress } from './status'
@@ -44,9 +45,21 @@ export class MemoryBridge implements CoreBridge {
   private bookmarks = new Map<string, Bookmark>()
   private sessions = new Map<string, Session>()
   private pages = new Map<string, string[]>()
+  private volumeChapters = new Map<string, VolumeChapter[]>()
 
-  /** `pages` : URL des pages CBZ par œuvre (images générées pour les tests et le développement). */
-  constructor(seed: { works?: Work[]; series?: Series[]; pages?: Record<string, string[]> } = {}) {
+  /**
+   * `pages` : URL des pages CBZ par œuvre (images générées pour les tests et le développement) ;
+   * `chapters` : chapitres contenus dans des volumes.
+   */
+  constructor(
+    seed: {
+      works?: Work[]
+      series?: Series[]
+      pages?: Record<string, string[]>
+      chapters?: Record<string, VolumeChapter[]>
+    } = {},
+  ) {
+    for (const [id, list] of Object.entries(seed.chapters ?? {})) this.volumeChapters.set(id, list)
     for (const s of seed.series ?? []) this.series.set(s.id, { ...s })
     for (const w of seed.works ?? []) this.works.set(w.id, { ...w, authors: [...w.authors] })
     for (const [id, urls] of Object.entries(seed.pages ?? {})) this.pages.set(id, [...urls])
@@ -131,6 +144,11 @@ export class MemoryBridge implements CoreBridge {
   async getPageCount(id: string): Promise<number> {
     const work = this.requireWork(id)
     return this.pages.get(id)?.length ?? work.pageCount ?? 0
+  }
+
+  async getVolumeChapters(id: string): Promise<VolumeChapter[]> {
+    this.requireWork(id)
+    return this.volumeChapters.get(id) ?? []
   }
 
   async getPageUrl(id: string, page: number): Promise<string> {

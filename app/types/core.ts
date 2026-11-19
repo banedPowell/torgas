@@ -17,6 +17,7 @@ export type { ReadingDirection } from '#core-bindings/ReadingDirection'
 export type { ReadingSession } from '#core-bindings/ReadingSession'
 export type { ReadingStatus } from '#core-bindings/ReadingStatus'
 export type { Series } from '#core-bindings/Series'
+export type { VolumeChapter } from '#core-bindings/VolumeChapter'
 export type { WorkKind } from '#core-bindings/WorkKind'
 export type { Work }
 

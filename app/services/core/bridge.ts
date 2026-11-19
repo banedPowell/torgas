@@ -5,6 +5,7 @@ import type {
   ReadingDirection,
   ReadingStatus,
   Series,
+  VolumeChapter,
   Work,
 } from '~/types/core'
 
@@ -35,6 +36,11 @@ export interface CoreBridge {
    */
   getPageCount(id: string): Promise<number>
   getPageUrl(id: string, page: number): Promise<string>
+  /**
+   * Chapitres contenus dans un volume lu page par page, retrouvés d'après le nom de ses pages
+   * (`109-00.jpg`, dossier « Chapitre 109 ») ; vide si les noms n'en disent rien.
+   */
+  getVolumeChapters(id: string): Promise<VolumeChapter[]>
   getLocator(id: string): Promise<Locator | null>
   saveLocator(id: string, locator: Locator): Promise<void>
   listBookmarks(id: string): Promise<Bookmark[]>

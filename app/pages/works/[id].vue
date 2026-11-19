@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ReadingDirection, ReadingStatus } from '~/types/core'
+import type { ReadingDirection, ReadingStatus, Work } from '~/types/core'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -52,6 +52,31 @@ async function confirmDelete() {
   confirmingDelete.value = false
   await navigateTo('/')
 }
+
+// Suppression d'un seul volume ou chapitre de la série : le reste de la série est gardé.
+const deletion = useWorkDeletion()
+const workLabel = useWorkLabel()
+const pendingItem = shallowRef<Work | null>(null)
+const itemOpen = computed({
+  get: () => !!pendingItem.value,
+  set: (open: boolean) => {
+    if (!open) pendingItem.value = null
+  },
+})
+const itemTitle = computed(() =>
+  pendingItem.value
+    ? t('deletion.title', { title: workLabel(pendingItem.value, series.value) })
+    : '',
+)
+async function confirmItemDelete() {
+  const item = pendingItem.value
+  if (!item) return
+  const last = deletable.value.length <= 1
+  if (!(await deletion.deleteWorks([item]))) return
+  pendingItem.value = null
+  if (last) await navigateTo('/')
+  else await load({ quiet: true })
+}
 </script>
 
 <template>
@@ -84,6 +109,14 @@ async function confirmDelete() {
           :loading="deleting"
           @confirm="confirmDelete"
         />
+        <WorkDeleteDialog
+          v-model:open="itemOpen"
+          :title="itemTitle"
+          :description="$t('deletion.itemDescription')"
+          :confirm-label="$t('deletion.confirm')"
+          :loading="deleting"
+          @confirm="confirmItemDelete"
+        />
       </div>
     </template>
 
@@ -115,7 +148,7 @@ async function confirmDelete() {
         :title="$t('work.error.title')"
         :description="$t('work.error.description', { message: error })"
       >
-        <UButton icon="i-lucide-rotate-ccw" :label="$t('work.error.action')" @click="load" />
+        <UButton icon="i-lucide-rotate-ccw" :label="$t('work.error.action')" @click="load()" />
         <UButton to="/" color="neutral" variant="outline" :label="$t('work.back')" />
       </EmptyState>
 
@@ -186,6 +219,7 @@ async function confirmDelete() {
               :gaps="seriesChapters.gaps.value"
               :missing-count="seriesChapters.missingCount.value"
               :title-hidden="hasBothViews"
+              @remove="pendingItem = $event"
             />
             <WorkVolumes
               v-else
@@ -193,6 +227,7 @@ async function confirmDelete() {
               :next-id="next?.id"
               :missing="missing"
               :title-hidden="hasBothViews"
+              @remove="pendingItem = $event"
             />
           </template>
           <WorkChapters

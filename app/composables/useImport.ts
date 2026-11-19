@@ -46,14 +46,11 @@ async function readFile(
 /**
  * File d'import : fichiers traités un par un, progression par fichier et globale, résultat par
  * statut (importé, doublon, DRM, non pris en charge, erreur), annulation des fichiers restants.
- * La bibliothèque est rechargée et un toast résume l'import à la fin de la file.
+ * La bibliothèque est rechargée à la fin de la file ; le panneau d'import montre le résultat.
  */
 export function useImport() {
   const core = useCore()
-  const toast = useToast()
   const library = useLibrary()
-  // $i18n plutôt que useI18n() : le composable peut être appelé hors d'un setup.
-  const { t } = useNuxtApp().$i18n
 
   const items = useState('import:items', () => shallowRef<ImportEntry[]>([]))
   const running = useState('import:running', () => false)
@@ -128,14 +125,7 @@ export function useImport() {
     } finally {
       running.value = false
     }
-    if (imported > 0) {
-      toast.add({
-        title: t('import.toast', { n: imported }, imported),
-        icon: 'i-lucide-circle-check',
-        color: 'success',
-      })
-      await library.load()
-    }
+    if (imported > 0) await library.load()
   }
 
   /** Ajoute des fichiers à la file et lance le traitement si besoin. */

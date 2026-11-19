@@ -14,6 +14,7 @@
 pub mod analysis;
 pub mod cbz;
 pub mod comicinfo;
+pub mod contents;
 pub mod epub;
 pub mod error;
 pub mod hash;
@@ -58,6 +59,7 @@ mod bindings {
         Bookmark::export_all(&cfg).unwrap();
         ReadingSession::export_all(&cfg).unwrap();
         Analysis::export_all(&cfg).unwrap();
+        contents::VolumeChapter::export_all(&cfg).unwrap();
         #[cfg(feature = "sqlite")]
         db::ImportOutcome::export_all(&cfg).unwrap();
     }

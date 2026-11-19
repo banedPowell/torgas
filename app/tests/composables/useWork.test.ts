@@ -175,13 +175,12 @@ describe('useWork', () => {
     expect(fiche.work.value?.id).toBe('horla')
   })
 
-  it('change le statut via le cœur et prévient par un toast', async () => {
+  it('change le statut via le cœur, sans toast', async () => {
     const fiche = await open('eleves')
     expect(await fiche.setStatus('finished')).toBe(true)
     expect(fiche.work.value?.status).toBe('finished')
     expect((await bridge.current!.getWork('eleves'))?.status).toBe('finished')
-    expect(toasts).toHaveLength(1)
-    expect(toasts[0]?.color).toBe('success')
+    expect(toasts).toHaveLength(0)
   })
 
   it('ne fait rien si le statut est inchangé ou s’il s’agit d’une série', async () => {
@@ -207,7 +206,7 @@ describe('useWork', () => {
     expect(fiche.series.value?.direction).toBe('rtl')
     expect((await bridge.current!.listSeries())[0]?.direction).toBe('rtl')
     expect(await fiche.setDirection('rtl')).toBe(false)
-    expect(toasts).toHaveLength(1)
+    expect(toasts).toHaveLength(0)
   })
 
   it('refuse un sens de lecture pour une œuvre seule', async () => {

@@ -3,10 +3,14 @@ import type { ReadingDirection, Work } from '~/types/core'
 import type { ComicLayout } from '~/utils/comic'
 
 /** Lecteur manga et BD (CBZ), monté par `pages/read/[id].vue`. */
-const props = defineProps<{ work: Work }>()
+const props = defineProps<{
+  work: Work
+  /** Page d'ouverture (chapitre choisi sur la fiche) au lieu de la position enregistrée. */
+  startPage?: number
+}>()
 const emit = defineEmits<{ close: [] }>()
 
-const reader = useComicReader(() => props.work)
+const reader = useComicReader(() => props.work, { startPage: props.startPage })
 const settings = useComicSettings()
 // Session de lecture : s'ouvre quand les pages sont prêtes ; chaque changement de page compte.
 useReadingSession(() => props.work.id, {

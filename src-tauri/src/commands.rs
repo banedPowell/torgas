@@ -115,6 +115,15 @@ pub async fn get_page_count(state: DesktopState<'_>, id: String) -> Result<usize
     blocking(&state, move |d| d.page_count(&id)).await
 }
 
+/// Chapitres contenus dans un volume (d'après le nom de ses pages).
+#[tauri::command]
+pub async fn get_volume_chapters(
+    state: DesktopState<'_>,
+    id: String,
+) -> Result<Vec<torgas_core::contents::VolumeChapter>> {
+    blocking(&state, move |d| d.volume_chapters(&id)).await
+}
+
 /// Dernière position de lecture.
 #[tauri::command]
 pub async fn get_locator(state: DesktopState<'_>, id: String) -> Result<Option<Locator>> {

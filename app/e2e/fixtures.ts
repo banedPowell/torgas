@@ -221,6 +221,26 @@ export function makeCbz(name = `${CBZ_TITLE}.cbz`, tint = 0, salt?: number): Fix
   }
 }
 
+/**
+ * Volume de scan dont les pages disent leur chapitre (`109-00.png`, `109-01.png`, `110-00.png`…) :
+ * `pagesPerChapter` pages par chapitre, chacune de couleur distincte.
+ */
+export function makeChapteredCbz(name: string, chapters: number[], pagesPerChapter = 2): Fixture {
+  const files: Zippable = {}
+  chapters.forEach((chapter, c) => {
+    for (let p = 0; p < pagesPerChapter; p++) {
+      const shade = (40 + c * 50 + p * 20) % 256
+      const png = makePng([shade, 255 - shade, (shade * 7) % 256])
+      files[`${chapter}-${String(p).padStart(2, '0')}.png`] = [png, { level: 0 }]
+    }
+  })
+  return {
+    name,
+    mimeType: 'application/vnd.comicbook+zip',
+    buffer: Buffer.from(zipSync(files)),
+  }
+}
+
 /** Nom d'un CBZ d'Anna's Archive : segments ` -- `, tome `T013`, sans `ComicInfo.xml`. */
 export const ANNA_CBZ_NAME =
   'One Piece T013 -- Eiichiro Oda -- 2014 -- Glénat Manga -- isbn13 9782331011634 -- ' +
