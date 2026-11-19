@@ -11,8 +11,8 @@ function close() {
   else router.push(`/works/${id.value}`)
 }
 
-// Le lecteur EPUB gère lui-même Échap (pour ne pas quitter quand un panneau est ouvert).
-defineShortcuts(computed(() => (work.value?.format === 'epub' ? {} : { escape: close })))
+// Les lecteurs EPUB et manga gèrent eux-mêmes Échap (pour ne pas quitter quand un panneau est ouvert).
+defineShortcuts(computed(() => (work.value ? {} : { escape: close })))
 </script>
 
 <template>
@@ -29,5 +29,5 @@ defineShortcuts(computed(() => (work.value?.format === 'epub' ? {} : { escape: c
     </EmptyState>
   </div>
   <LazyReaderEpub v-else-if="work.format === 'epub'" :work-id="work.id" @close="close" />
-  <LazyReaderComic v-else-if="work.format === 'cbz'" :work-id="work.id" @close="close" />
+  <LazyReaderComic v-else-if="work.format === 'cbz'" :work="work" @close="close" />
 </template>
