@@ -21,6 +21,9 @@ const {
   load,
   setStatus,
   setDirection,
+  deleting,
+  deletable,
+  remove,
 } = useWork(() => String(route.params.id))
 
 useHead({
@@ -29,6 +32,19 @@ useHead({
 
 const loading = computed(() => state.value === 'idle' || state.value === 'loading')
 const showDirection = computed(() => series.value && meta.value?.kind === 'comic')
+
+// Suppression : menu « Plus d'actions », confirmation, puis retour à la bibliothèque.
+const confirmingDelete = ref(false)
+const deleteDescription = computed(() =>
+  series.value
+    ? t('deletion.seriesDescription', { n: deletable.value.length }, deletable.value.length)
+    : t('deletion.description'),
+)
+async function confirmDelete() {
+  if (!(await remove())) return
+  confirmingDelete.value = false
+  await navigateTo('/')
+}
 </script>
 
 <template>
@@ -40,7 +56,7 @@ const showDirection = computed(() => series.value && meta.value?.kind === 'comic
     }"
   >
     <template #header>
-      <div class="px-2 pt-3 pb-1 sm:px-4 lg:px-6 lg:pt-4">
+      <div class="flex items-center justify-between px-2 pt-3 pb-1 sm:px-4 lg:px-6 lg:pt-4">
         <UButton
           to="/"
           icon="i-lucide-chevron-left"
@@ -51,6 +67,16 @@ const showDirection = computed(() => series.value && meta.value?.kind === 'comic
         >
           <span class="sr-only lg:not-sr-only">{{ $t('work.back') }}</span>
         </UButton>
+        <WorkMenu v-if="meta" :disabled="deleting" @delete="confirmingDelete = true" />
+        <WorkDeleteDialog
+          v-if="meta"
+          v-model:open="confirmingDelete"
+          :title="$t('deletion.title', { title: meta.title })"
+          :description="deleteDescription"
+          :confirm-label="$t('deletion.confirm')"
+          :loading="deleting"
+          @confirm="confirmDelete"
+        />
       </div>
     </template>
 

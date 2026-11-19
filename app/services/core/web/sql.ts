@@ -58,7 +58,7 @@ export const DELETE_WORKS = `DELETE FROM work WHERE id IN ${IDS_PARAM}`
 export const DELETE_EMPTY_SERIES = `DELETE FROM series
   WHERE NOT EXISTS (SELECT 1 FROM work WHERE work.series_id = series.id)`
 
-export const SET_STATUS =`UPDATE library_entry SET
+export const SET_STATUS = `UPDATE library_entry SET
     status = ?2,
     started_at = CASE WHEN ?2 = 'reading' THEN COALESCE(started_at, ?3) ELSE started_at END,
     finished_at = CASE WHEN ?2 = 'finished' THEN ?3 ELSE finished_at END

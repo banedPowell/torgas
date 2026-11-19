@@ -1,4 +1,4 @@
-import type { Work } from '~/types/core'
+import type { Series, Work } from '~/types/core'
 import type { LibraryEntry } from '~/types/library'
 import { groupBySeries } from '~/utils/library'
 
@@ -18,9 +18,10 @@ export function useLibrarySelection() {
   const selected = computed(() => new Set(ids.value))
   /** Entrées cochées encore présentes, toutes séries comprises (sans les filtres affichés). */
   const entries = computed<LibraryEntry[]>(() => {
-    const byId = new Map(
-      groupBySeries(library.works.value, library.series.value).map((e) => [e.id, e]),
-    )
+    // `readonly()` type les listes en lecture seule profonde ; elles ne sont pas modifiées ici.
+    const works = library.works.value as readonly Work[]
+    const series = library.series.value as readonly Series[]
+    const byId = new Map(groupBySeries(works, series).map((e) => [e.id, e]))
     return ids.value.flatMap((id) => byId.get(id) ?? [])
   })
   /** Œuvres à supprimer : une série sélectionnée compte pour tous ses volumes. */

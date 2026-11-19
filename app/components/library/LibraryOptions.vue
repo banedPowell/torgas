@@ -10,12 +10,15 @@ const props = defineProps<{
   sort: LibrarySort
   view: LibraryView
   desktop?: boolean
+  /** Mode sélection actif (bouton « Sélectionner » enfoncé). */
+  selecting?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:format': [value: FormatFilter]
   'update:sort': [value: LibrarySort]
   'update:view': [value: LibraryView]
+  'update:selecting': [value: boolean]
 }>()
 
 const { t } = useI18n()
@@ -83,6 +86,16 @@ const selectUi = computed(() => ({
           @click="emit('update:view', button.value)"
         />
       </UFieldGroup>
+      <UButton
+        v-if="!desktop"
+        icon="i-lucide-square-check-big"
+        color="neutral"
+        :variant="selecting ? 'soft' : 'ghost'"
+        :aria-label="$t('library.selection.startLabel')"
+        :aria-pressed="!!selecting"
+        class="size-11 justify-center rounded-[10px]"
+        @click="emit('update:selecting', !selecting)"
+      />
     </div>
     <UFieldGroup v-if="desktop" :aria-label="$t('library.view.label')" class="order-3">
       <UButton
@@ -97,5 +110,15 @@ const selectUi = computed(() => ({
         @click="emit('update:view', button.value)"
       />
     </UFieldGroup>
+    <UButton
+      v-if="desktop"
+      icon="i-lucide-square-check-big"
+      color="neutral"
+      :variant="selecting ? 'soft' : 'outline'"
+      :label="$t('library.selection.start')"
+      :aria-pressed="!!selecting"
+      class="order-4 h-10 rounded-[10px]"
+      @click="emit('update:selecting', !selecting)"
+    />
   </div>
 </template>

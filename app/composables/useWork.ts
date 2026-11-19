@@ -9,6 +9,7 @@ import type { LoadState } from './useLibrary'
 export function useWork(id: MaybeRefOrGetter<string>) {
   const core = useCore()
   const library = useLibrary()
+  const deletion = useWorkDeletion()
   const toast = useToast()
   const { t } = useNuxtApp().$i18n
 
@@ -65,6 +66,14 @@ export function useWork(id: MaybeRefOrGetter<string>) {
     () => work.value ?? next.value ?? volumes.value[0] ?? null,
   )
   const action = computed(() => (readTarget.value ? readAction(readTarget.value) : null))
+
+  /** Ce que « Supprimer de la bibliothèque » retire : l'œuvre, ou tous les volumes de la série. */
+  const deletable = computed<Work[]>(() => (work.value ? [work.value] : volumes.value))
+
+  /** Supprime l'œuvre ou la série ; renvoie `true` si c'est fait (erreur signalée par un toast). */
+  function remove(): Promise<boolean> {
+    return deletion.deleteWorks(deletable.value)
+  }
 
   /** La bibliothèque affiche un statut et une progression : on la recharge si elle l'est déjà. */
   function refreshLibrary() {
@@ -130,6 +139,7 @@ export function useWork(id: MaybeRefOrGetter<string>) {
     state: readonly(state),
     error: readonly(error),
     saving: readonly(saving),
+    deleting: deletion.deleting,
     work,
     series,
     volumes,
@@ -146,5 +156,7 @@ export function useWork(id: MaybeRefOrGetter<string>) {
     load,
     setStatus,
     setDirection,
+    deletable,
+    remove,
   }
 }

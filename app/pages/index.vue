@@ -19,6 +19,15 @@ onMounted(library.ensureLoaded)
 
 const showContent = computed(() => state.value === 'ready' && !isEmpty.value)
 
+// Mode sélection (suppression en lot) : quitté avec Échap ou en sortant de la page.
+const selection = useLibrarySelection()
+const { active: selecting, selected } = selection
+const setSelecting = (on: boolean) => (on ? selection.start() : selection.stop())
+defineShortcuts({
+  escape: { usingInput: false, handler: () => selecting.value && selection.stop() },
+})
+onBeforeUnmount(selection.stop)
+
 const importer = useImport()
 const { items: importItems, running: importing, current, progress, done, total } = importer
 const dropzone = useTemplateRef('dropzone')
@@ -60,9 +69,11 @@ function openPicker() {
               :format="filters.format"
               :sort="sort"
               :view="view"
+              :selecting="selecting"
               @update:format="library.setFormat"
               @update:sort="library.setSort"
               @update:view="library.setView"
+              @update:selecting="setSelecting"
             />
           </div>
           <UButton
@@ -113,9 +124,11 @@ function openPicker() {
             :format="filters.format"
             :sort="sort"
             :view="view"
+            :selecting="selecting"
             @update:format="library.setFormat"
             @update:sort="library.setSort"
             @update:view="library.setView"
+            @update:selecting="setSelecting"
           />
         </template>
 
@@ -167,8 +180,16 @@ function openPicker() {
           />
         </EmptyState>
 
-        <LibraryGrid v-else-if="view === 'grid'" :entries="entries" :virtualized="virtualized" />
-        <LibraryList v-else :entries="entries" :virtualized="virtualized" />
+        <LibraryGrid
+          v-else-if="view === 'grid'"
+          v-bind="{ entries, virtualized, selecting, selected }"
+          @toggle="selection.toggle"
+        />
+        <LibraryList
+          v-else
+          v-bind="{ entries, virtualized, selecting, selected }"
+          @toggle="selection.toggle"
+        />
       </template>
     </UDashboardPanel>
 
