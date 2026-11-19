@@ -143,7 +143,7 @@
     "close": "Quitter le lecteur",
     "soon": {
       "title": "Lecteur en préparation",
-      "description": "Les lecteurs EPUB et manga arrivent aux prochaines étapes."
+      "description": "Ce format sera bientôt lisible dans Torgas."
     },
     "comic": {
       "loading": "Ouverture du volume",
@@ -203,6 +203,67 @@
         "empty": "Ce volume ne contient aucune page lisible.",
         "retry": "Réessayer"
       }
+    },
+    "back": "Retour à la bibliothèque",
+    "loading": "Ouverture du livre",
+    "text": "Texte de l'œuvre",
+    "showUi": "Afficher l'interface",
+    "hideUi": "Masquer l'interface",
+    "notFound": {
+      "title": "Œuvre introuvable",
+      "description": "Elle a peut-être été retirée de ta bibliothèque."
+    },
+    "unreadable": {
+      "title": "Impossible d'ouvrir ce livre",
+      "description": "Le fichier est peut-être endommagé ou dans un format non pris en charge."
+    },
+    "toolbar": {
+      "toc": "Sommaire",
+      "addBookmark": "Ajouter un marque-page",
+      "removeBookmark": "Retirer le marque-page",
+      "settings": "Réglages de lecture"
+    },
+    "progress": {
+      "label": "Position dans l'œuvre",
+      "page": "p. {page}",
+      "minutesLeft": "{n} min restante dans le chapitre | {n} min restantes dans le chapitre"
+    },
+    "toc": {
+      "title": "Navigation",
+      "contents": "Sommaire",
+      "bookmarks": "Marque-pages",
+      "empty": "Ce livre n'a pas de sommaire.",
+      "noBookmarks": "Aucun marque-page pour l'instant.",
+      "noBookmarksHint": "Ajoute-en un avec l'icône en haut de l'écran.",
+      "remove": "Retirer le marque-page « {label} »"
+    },
+    "settings": {
+      "title": "Réglages de lecture",
+      "theme": "Thème",
+      "themes": {
+        "auto": "Auto",
+        "paper": "Papier",
+        "sepia": "Sépia",
+        "dark": "Sombre",
+        "black": "Noir"
+      },
+      "font": "Police",
+      "fonts": {
+        "literata": "Literata",
+        "atkinson": "Atkinson",
+        "publisher": "Éditeur"
+      },
+      "fontSize": "Taille du texte",
+      "smaller": "Réduire la taille du texte",
+      "larger": "Agrandir la taille du texte",
+      "lineHeight": "Interligne",
+      "margin": "Marges",
+      "margins": {
+        "narrow": "Étroites",
+        "normal": "Normales",
+        "wide": "Larges"
+      },
+      "reset": "Rétablir les réglages par défaut"
     }
   },
   "cover": {
