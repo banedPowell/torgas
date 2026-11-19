@@ -20,6 +20,13 @@ const tocOpen = ref(false)
 const settingsOpen = ref(false)
 const toc = computed(() => flattenToc(view.value?.book.toc))
 
+// Session de lecture : s'ouvre une fois le livre affiché ; chaque changement de page compte.
+const session = useReadingSession(() => props.workId, {
+  ready: () => reader.state.value === 'ready' && !opening.value,
+  progress: () => reader.position.value?.progress ?? reader.work.value?.progress ?? 0,
+  activity: () => reader.position.value,
+})
+
 const fontFaces = readerFontFaces(window.location.href)
 useHead({ style: [{ key: 'reader-fonts', textContent: fontFaces }] })
 
@@ -63,6 +70,7 @@ function onRelocate(d: FoliateRelocateDetail) {
 
 // Le livre est rendu dans des iframes : on y relaie les taps et le clavier.
 function onSectionLoad(doc: Document) {
+  session.listen(doc)
   doc.addEventListener('keydown', onKey)
   doc.addEventListener('click', (e) => {
     const target = e.target as Element | null
