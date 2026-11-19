@@ -33,14 +33,14 @@
     "statusFilter": "Filtrer par statut",
     "formatFilter": {
       "label": "Filtrer par support",
-      "all": "Support : tous",
-      "epub": "Support : EPUB",
-      "cbz": "Support : CBZ"
+      "all": "Tous",
+      "epub": "EPUB",
+      "cbz": "CBZ"
     },
     "sort": {
       "label": "Trier",
       "lastRead": "Récemment lus",
-      "added": "Récemment ajoutés",
+      "added": "Ajouts récents",
       "title": "Titre (A → Z)"
     },
     "view": {
@@ -80,11 +80,64 @@
       "title": "Œuvre introuvable",
       "description": "Elle a peut-être été retirée de ta bibliothèque."
     },
-    "soon": {
-      "title": "Fiche en préparation",
-      "description": "Métadonnées, statut et volumes arrivent avec la fiche œuvre."
+    "loading": "Chargement de la fiche",
+    "error": {
+      "title": "Impossible d'ouvrir la fiche",
+      "description": "Le cœur de lecture n'a pas répondu ({message}).",
+      "action": "Réessayer"
     },
-    "read": "Lire"
+    "kind": {
+      "novel": "Roman",
+      "comic": "BD"
+    },
+    "eyebrow": {
+      "work": "{kind} · {format}",
+      "series": "Série · {kind} · {format}"
+    },
+    "status": {
+      "label": "Statut de lecture",
+      "updated": "Statut mis à jour : {status}",
+      "error": "Impossible de changer le statut"
+    },
+    "direction": {
+      "label": "Sens de lecture",
+      "ltr": "Gauche → droite",
+      "rtl": "Droite → gauche",
+      "updated": "Sens de lecture : {direction}",
+      "error": "Impossible de changer le sens de lecture"
+    },
+    "details": {
+      "label": "Informations",
+      "format": "Format",
+      "size": "Taille",
+      "language": "Langue",
+      "added": "Ajouté le",
+      "volumes": "Volumes"
+    },
+    "progress": {
+      "label": "Progression",
+      "read": "Lu",
+      "volumes": "{read} / {total} vol. lus"
+    },
+    "action": {
+      "read": "Lire",
+      "resume": "Reprendre à {percent}",
+      "reread": "Relire",
+      "readVolume": "Lire le volume {volume}",
+      "resumeVolume": "Reprendre le volume {volume} à {percent}",
+      "rereadVolume": "Relire le volume {volume}"
+    },
+    "volumes": {
+      "title": "Volumes",
+      "next": "Prochain volume",
+      "number": "Volume {n}",
+      "finished": "Terminé",
+      "inProgress": "En cours · {percent}",
+      "notStarted": "Non commencé",
+      "gap": "Volume {list} manquant | Volumes {list} manquants",
+      "missingFile": "Fichier manquant",
+      "incomplete": "Série incomplète : volume {list} manquant | Série incomplète : volumes {list} manquants"
+    }
   },
   "reader": {
     "close": "Quitter le lecteur",
