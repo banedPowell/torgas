@@ -6,3 +6,5 @@ coverage
 public
 pnpm-lock.yaml
 vendor
+test-results
+playwright-report

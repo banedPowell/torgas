@@ -11,7 +11,8 @@
     "typecheck": "nuxt typecheck",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write . && eslint . --fix",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
@@ -35,9 +36,11 @@
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",
     "@nuxt/test-utils": "^4.4.0",
+    "@playwright/test": "^1.65.1",
     "@vue/test-utils": "^2.6.0",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
+    "fflate": "^0.8.3",
     "happy-dom": "^21.0.4",
     "prettier": "^3.10.1",
     "typescript": "~6.0.3",
