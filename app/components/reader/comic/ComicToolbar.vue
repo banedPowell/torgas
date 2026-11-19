@@ -23,40 +23,46 @@ const layouts = computed(() =>
 <template>
   <div class="flex flex-col gap-2 bg-muted/95 px-2 pt-3.5 pb-3 backdrop-blur-sm">
     <header class="flex items-center gap-1">
-      <UButton
-        icon="i-lucide-chevron-left"
-        color="neutral"
-        variant="ghost"
-        size="xl"
-        square
-        class="size-11 justify-center"
-        :aria-label="$t('reader.comic.close')"
-        @click="$emit('close')"
-      />
+      <UTooltip :text="$t('reader.comic.close')">
+        <UButton
+          icon="i-lucide-chevron-left"
+          color="neutral"
+          variant="ghost"
+          size="xl"
+          square
+          class="size-11 justify-center"
+          :aria-label="$t('reader.comic.close')"
+          @click="$emit('close')"
+        />
+      </UTooltip>
       <div class="flex min-w-0 flex-1 flex-col gap-px">
         <h1 class="truncate text-sm font-semibold text-default">{{ title }}</h1>
         <p v-if="subtitle" class="truncate text-xs text-muted">{{ subtitle }}</p>
       </div>
-      <UButton
-        icon="i-lucide-layout-grid"
-        color="neutral"
-        variant="ghost"
-        size="lg"
-        square
-        class="size-11 justify-center"
-        :aria-label="$t('reader.comic.thumbnails')"
-        @click="$emit('thumbnails')"
-      />
-      <UButton
-        icon="i-lucide-sliders-horizontal"
-        color="neutral"
-        variant="ghost"
-        size="lg"
-        square
-        class="size-11 justify-center"
-        :aria-label="$t('reader.comic.settings')"
-        @click="$emit('settings')"
-      />
+      <UTooltip :text="$t('reader.comic.thumbnails')">
+        <UButton
+          icon="i-lucide-layout-grid"
+          color="neutral"
+          variant="ghost"
+          size="lg"
+          square
+          class="size-11 justify-center"
+          :aria-label="$t('reader.comic.thumbnails')"
+          @click="$emit('thumbnails')"
+        />
+      </UTooltip>
+      <UTooltip :text="$t('reader.comic.settings')">
+        <UButton
+          icon="i-lucide-sliders-horizontal"
+          color="neutral"
+          variant="ghost"
+          size="lg"
+          square
+          class="size-11 justify-center"
+          :aria-label="$t('reader.comic.settings')"
+          @click="$emit('settings')"
+        />
+      </UTooltip>
     </header>
     <ComicSegmented
       v-model="layout"

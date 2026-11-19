@@ -23,21 +23,44 @@ const showContent = computed(() => state.value === 'ready' && !isEmpty.value)
 const selection = useLibrarySelection()
 const { active: selecting, selected } = selection
 const setSelecting = (on: boolean) => (on ? selection.start() : selection.stop())
-defineShortcuts({
-  escape: { usingInput: false, handler: () => selecting.value && selection.stop() },
-})
+// Actif seulement pendant la sélection : sinon Échap doit rester aux panneaux et menus.
+defineShortcuts(
+  computed(() =>
+    selecting.value ? { escape: { usingInput: false, handler: () => selection.stop() } } : {},
+  ),
+)
 onBeforeUnmount(selection.stop)
+
+// Menu contextuel des cartes (clic droit, appui long sur mobile) et sa confirmation de suppression.
+const actions = useEntryActions()
+const deleteOpen = computed({
+  get: () => !!actions.pending.value,
+  set: (open: boolean) => !open && actions.cancelDelete(),
+})
+const deleteTitle = computed(() => {
+  const entry = actions.pending.value
+  return entry ? t('deletion.title', { title: entryTitle(entry) }) : ''
+})
+const deleteDescription = computed(() => {
+  const entry = actions.pending.value
+  if (entry?.kind !== 'series') return t('deletion.description')
+  return t('deletion.seriesDescription', { n: entry.works.length }, entry.works.length)
+})
 
 const importer = useImport()
 const { items: importItems, running: importing, current, progress, done, total } = importer
 const dropzone = useTemplateRef('dropzone')
 // Desktop : fichiers déposés sur la fenêtre ou ouverts par association.
 const { hovering } = useTauriFileDrop(importer.add)
-// Desktop : panneau latéral d'import ; mobile : bandeau puis résultats au-dessus de la grille.
 const isDesktop = useMediaQuery('(min-width: 1024px)')
 
+// Panneau d'import (Slideover sur desktop, Drawer sur mobile) : ouvert par « Importer » et
+// dès qu'un import démarre (fichiers déposés sur la fenêtre, ouverts par association…).
+const importOpen = ref(false)
+watch(importing, (running) => running && (importOpen.value = true))
+
 function openPicker() {
-  dropzone.value?.open()
+  importOpen.value = true
 }
 </script>
 
@@ -47,7 +70,7 @@ function openPicker() {
       id="library"
       class="min-h-0 flex-1"
       :ui="{
-        body: 'gap-3 sm:gap-4 lg:gap-5 lg:px-7 pb-[calc(var(--resume-space,0px)+1rem)] sm:pb-[calc(var(--resume-space,0px)+1.5rem)]',
+        body: 'gap-3 sm:gap-4 lg:gap-5 lg:px-7 *:shrink-0 pb-[calc(var(--resume-space,0px)+1rem)] sm:pb-[calc(var(--resume-space,0px)+1.5rem)]',
       }"
     >
       <template #header>
@@ -92,23 +115,16 @@ function openPicker() {
       </template>
 
       <template #body>
-        <template v-if="!isDesktop">
-          <ImportStatusBar
-            v-if="importing"
-            :name="current?.name"
-            :progress="progress"
-            :done="done"
-            :total="total"
-            @cancel="importer.cancel"
-          />
-          <ImportQueue
-            v-else-if="importItems.length"
-            :items="importItems"
-            :running="importing"
-            :dropzone="false"
-            @clear="importer.clear"
-          />
-        </template>
+        <!-- Mobile, panneau refermé pendant un import : progression en bandeau, qui le rouvre. -->
+        <ImportStatusBar
+          v-if="!isDesktop && importing && !importOpen"
+          :name="current?.name"
+          :progress="progress"
+          :done="done"
+          :total="total"
+          @cancel="importer.cancel"
+          @open="importOpen = true"
+        />
 
         <template v-if="showContent">
           <LibrarySearch
@@ -186,28 +202,35 @@ function openPicker() {
         <LibraryGrid
           v-else-if="view === 'grid'"
           v-bind="{ entries, virtualized, selecting, selected }"
+          :menu-for="actions.menuFor"
           @toggle="selection.toggle"
         />
         <LibraryList
           v-else
           v-bind="{ entries, virtualized, selecting, selected }"
+          :menu-for="actions.menuFor"
           @toggle="selection.toggle"
         />
       </template>
     </UDashboardPanel>
 
-    <aside
-      v-if="isDesktop && importItems.length"
-      class="w-[340px] shrink-0 overflow-y-auto border-s border-default bg-muted px-5 py-6"
-    >
-      <ImportQueue
-        :items="importItems"
-        :running="importing"
-        @files="importer.add"
-        @cancel="importer.cancel"
-        @clear="importer.clear"
-      />
-    </aside>
+    <WorkDeleteDialog
+      v-model:open="deleteOpen"
+      :title="deleteTitle"
+      :description="deleteDescription"
+      :confirm-label="$t('deletion.confirm')"
+      :loading="actions.deleting.value"
+      @confirm="actions.confirmDelete"
+    />
+
+    <ImportPanel
+      v-model:open="importOpen"
+      :items="importItems"
+      :running="importing"
+      @files="importer.add"
+      @cancel="importer.cancel"
+      @clear="importer.clear"
+    />
 
     <ImportDropzone ref="dropzone" :hovering="hovering" @files="importer.add" />
   </div>

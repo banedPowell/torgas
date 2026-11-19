@@ -7,15 +7,17 @@ withDefaults(
     items: readonly ImportEntry[]
     running: boolean
     dropzone?: boolean
+    /** Titre « Import » et compteur (absents quand le conteneur porte déjà le titre). */
+    heading?: boolean
   }>(),
-  { dropzone: true },
+  { dropzone: true, heading: true },
 )
 const emit = defineEmits<{ files: [files: File[]]; cancel: []; clear: [] }>()
 </script>
 
 <template>
   <section :aria-label="$t('import.title')" class="flex flex-col gap-3.5">
-    <div class="flex items-center justify-between gap-3">
+    <div v-if="heading" class="flex items-center justify-between gap-3">
       <h2 class="font-display text-[22px] font-medium text-highlighted">
         {{ $t('import.title') }}
       </h2>
@@ -23,6 +25,10 @@ const emit = defineEmits<{ files: [files: File[]]; cancel: []; clear: [] }>()
         {{ $t('import.files', { n: items.length }, items.length) }}
       </span>
     </div>
+
+    <p v-if="!heading && items.length" class="font-mono text-[11px] text-muted">
+      {{ $t('import.files', { n: items.length }, items.length) }}
+    </p>
 
     <ImportDropzone v-if="dropzone" variant="inline" @files="emit('files', $event)" />
 

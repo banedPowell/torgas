@@ -76,15 +76,17 @@ watch(
         class="min-h-11"
         @click="emit('goTo')"
       />
-      <UButton
-        v-if="note.pinned"
-        icon="i-lucide-x"
-        color="neutral"
-        variant="ghost"
-        :aria-label="$t('reader.footnote.close')"
-        class="size-11 justify-center"
-        @click="emit('close')"
-      />
+      <UTooltip :text="$t('reader.footnote.close')">
+        <UButton
+          v-if="note.pinned"
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          :aria-label="$t('reader.footnote.close')"
+          class="size-11 justify-center"
+          @click="emit('close')"
+        />
+      </UTooltip>
     </div>
   </div>
 </template>

@@ -58,14 +58,16 @@ watch(
       class="h-10 rounded-[10px] px-3 text-[13px] font-semibold"
       @click="confirming = true"
     />
-    <UButton
-      icon="i-lucide-x"
-      color="neutral"
-      variant="ghost"
-      :aria-label="$t('library.selection.close')"
-      class="size-11 shrink-0 justify-center rounded-full text-inverted hover:bg-accented/20"
-      @click="emit('close')"
-    />
+    <UTooltip :text="$t('library.selection.close')">
+      <UButton
+        icon="i-lucide-x"
+        color="neutral"
+        variant="ghost"
+        :aria-label="$t('library.selection.close')"
+        class="size-11 shrink-0 justify-center rounded-full text-inverted hover:bg-accented/20"
+        @click="emit('close')"
+      />
+    </UTooltip>
     <WorkDeleteDialog
       v-model:open="confirming"
       :title="$t('deletion.batchTitle', { n: count }, count)"

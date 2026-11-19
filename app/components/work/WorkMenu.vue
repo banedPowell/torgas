@@ -25,18 +25,21 @@ const items = computed<DropdownMenuItem[]>(() => [
     :items="items"
     :content="{ align: 'end', sideOffset: 4 }"
     :ui="{
-      content: 'w-60 rounded-[14px] p-1.5',
-      item: 'h-[42px] rounded-[9px] px-2.5 text-sm font-semibold data-highlighted:before:bg-primary/10',
+      content: 'min-w-60 rounded-[14px] p-1.5',
+      item: 'min-h-[42px] items-center rounded-[9px] px-2.5 py-2 text-sm font-semibold data-highlighted:before:bg-primary/10',
+      itemLabel: 'whitespace-nowrap',
     }"
   >
-    <UButton
-      icon="i-lucide-ellipsis"
-      color="neutral"
-      variant="ghost"
-      size="xl"
-      :disabled="disabled"
-      :aria-label="$t('deletion.menu')"
-      class="size-11 justify-center rounded-full data-[state=open]:bg-accented"
-    />
+    <UTooltip :text="$t('deletion.menu')">
+      <UButton
+        icon="i-lucide-ellipsis"
+        color="neutral"
+        variant="ghost"
+        size="xl"
+        :disabled="disabled"
+        :aria-label="$t('deletion.menu')"
+        class="size-11 justify-center rounded-full data-[state=open]:bg-accented"
+      />
+    </UTooltip>
   </UDropdownMenu>
 </template>
