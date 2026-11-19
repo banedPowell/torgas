@@ -36,6 +36,8 @@ export function useComicReader(work: MaybeRefOrGetter<Work>, options: ComicReade
     computed(() => ({ width: windowSize.width.value, height: windowSize.height.value }))
 
   const workId = computed(() => toValue(work).id)
+  // Position : copie locale à chaque page, cœur au plus toutes les 2 s et en quittant le lecteur.
+  const saver = useLocatorSaver(workId, { interval: COMIC_SAVE_INTERVAL })
   const state = ref<LoadState>('idle')
   const error = ref<string | null>(null)
   const pageCount = ref(0)
@@ -192,10 +194,9 @@ export function useComicReader(work: MaybeRefOrGetter<Work>, options: ComicReade
       pageCount.value = count
       series.value = allSeries.find((s) => s.id === current.seriesId) ?? null
       nextVolume.value = findNextComicVolume(works, current) ?? null
-      const resume =
-        locator?.format === 'cbz'
-          ? (locator.page ?? comicPageFromProgress(locator.progress, count))
-          : 0
+      const stored = locator?.format === 'cbz' ? locator : null
+      const last = await saver.restore(stored, fresh?.lastReadAt)
+      const resume = last ? (last.page ?? comicPageFromProgress(last.progress, count)) : 0
       anchor.value = clampComicPage(resume, count)
       state.value = 'ready'
     } catch (e) {
@@ -205,33 +206,24 @@ export function useComicReader(work: MaybeRefOrGetter<Work>, options: ComicReade
   }
 
   // --- Sauvegarde de la position ----------------------------------------------------------
-  async function save(): Promise<void> {
-    if (state.value !== 'ready') return
-    try {
-      await core.saveLocator(workId.value, {
-        format: 'cbz',
-        page: page.value,
-        progress: progress.value,
-      })
-    } catch {
-      // Une sauvegarde manquée sera rattrapée à la suivante.
-    }
+  /** Écrit tout de suite la position courante ; se résout une fois enregistrée. */
+  function save(): Promise<void> {
+    return saver.flush()
   }
-  const throttledSave = useThrottleFn(save, COMIC_SAVE_INTERVAL, true, true)
 
-  watch([page, ended], () => {
-    if (state.value !== 'ready') return
-    preload()
-    throttledSave()
-  })
+  watch([page, ended], () => state.value === 'ready' && preload())
+  // Synchrone : une fermeture dans la foulée d'un changement de page enregistre la bonne page.
+  watch(
+    [page, ended],
+    () => {
+      if (state.value !== 'ready') return
+      saver.track({ format: 'cbz', page: page.value, progress: progress.value })
+    },
+    { flush: 'sync' },
+  )
   watch(state, (value) => value === 'ready' && preload())
 
-  useEventListener(document, 'visibilitychange', () => {
-    if (document.visibilityState === 'hidden') save()
-  })
-  useEventListener(window, 'pagehide', () => save())
   tryOnScopeDispose(() => {
-    save()
     preloaded.clear()
     urls.clear()
   })
