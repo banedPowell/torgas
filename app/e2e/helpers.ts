@@ -78,3 +78,24 @@ export async function readerPercent(page: Page): Promise<string | null> {
   const label = page.getByText(/^\d+\s%$/)
   return (await label.count()) ? label.first().textContent() : null
 }
+
+/**
+ * Progression du lecteur EPUB (barre visible) arrondie comme sur la fiche de l'œuvre : le texte
+ * sous le curseur, calculé sur la progression exacte et non sur la valeur du curseur (millièmes).
+ */
+export async function readerExactPercent(page: Page): Promise<string> {
+  const text = await page
+    .locator('footer')
+    .getByText(/\d+\s%$/)
+    .first()
+    .textContent()
+  const percent = text?.match(/\d+\s%$/)?.[0]
+  expect(percent, 'pourcentage sous le curseur').toBeTruthy()
+  return percent!
+}
+
+/** Lien « Reprendre à … » de la fiche, pour un pourcentage exact (« 67 % »). */
+export function resumeLink(page: Page, percent: string) {
+  const pattern = percent.replace(/\s/g, '\\s')
+  return page.getByRole('link', { name: new RegExp(`^Reprendre à ${pattern}$`) })
+}

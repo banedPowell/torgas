@@ -48,3 +48,26 @@ un hébergement statique quelconque doivent suffire).
   le navigateur ; un test Playwright du parcours d'import viendra avec l'étape de bout en bout.
 - Navigation privée de Firefox (pas d'OPFS) : le cœur est indisponible et la bibliothèque affiche
   son état d'erreur.
+
+## Complément (2026-11-19) : ordre des opérations et position de lecture durable (#29, #30)
+
+- **File d'opérations** : le worker traite ses messages dans l'ordre, mais une opération du
+  `WebBridge` en envoie souvent plusieurs (`saveLocator` vérifie l'œuvre puis écrit). Une lecture
+  appelée entre-temps (la fiche de l'œuvre, juste après la fermeture du lecteur) passait entre
+  les deux et lisait l'ancienne progression. Toutes les opérations sur la bibliothèque passent
+  donc par une file (`utils/serial.ts`) : chacune démarre quand la précédente est finie, dans
+  l'ordre d'appel. Le `TauriBridge` fait de même : ses commandes Rust tournent en
+  `spawn_blocking` et deux `invoke` peuvent s'y exécuter dans le désordre.
+- **Quitter le lecteur attend la dernière sauvegarde** : les deux lecteurs passent par
+  `useLocatorSaver`, qui écrit au plus toutes les 2 s (manga) ou 5 s (EPUB) pendant la lecture,
+  et dont `flush()` écrit tout de suite et se résout une fois l'écriture enregistrée. Un garde de
+  route (`onBeforeRouteLeave`/`onBeforeRouteUpdate`) l'attend, 3 s au plus, avant toute sortie
+  du lecteur (bouton, Échap, retour du navigateur, lien).
+- **Copie synchrone dans `localStorage`** : un déchargement de la page (rechargement, onglet
+  fermé) interrompt une écriture asynchrone vers le worker, que `pagehide`/`beforeunload` ne
+  peuvent pas attendre. Chaque changement de page écrit donc aussi la position dans
+  `localStorage` (`torgas:locator:<id>`, avec l'heure), effacée quand le cœur a confirmé cette
+  même position. À l'ouverture, le lecteur compare la copie à la position stockée : plus récente
+  que la dernière lecture enregistrée (`lastReadAt`), elle l'emporte et est écrite dans le cœur ;
+  sinon elle est effacée. SQLite reste la référence ; la copie ne fait que combler la fenêtre
+  entre le changement de page et l'écriture.
