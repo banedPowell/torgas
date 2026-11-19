@@ -144,6 +144,7 @@ mod tests {
     fn analysis(title: &str, authors: &[&str], series: Option<&str>, format: Format) -> Analysis {
         Analysis {
             format,
+            kind: format.default_kind(),
             sha256: "0".repeat(64),
             size_bytes: 0,
             title: title.to_owned(),
@@ -153,6 +154,7 @@ mod tests {
             volume: None,
             chapter: None,
             chapter_title: None,
+            direction: None,
             page_count: None,
             drm: false,
             cover: None,

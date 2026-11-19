@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use crate::cbz::{CbzArchive, Page};
 use crate::comicinfo::ComicInfo;
 use crate::error::{CoreError, Result};
-use crate::model::Format;
-use crate::naming::{NameInfo, clean_stem, parse_name};
+use crate::model::{Format, ReadingDirection, WorkKind};
+use crate::naming::{NameInfo, author_from_name, clean_stem, normalize_series_title, parse_name};
 use crate::{epub, hash, zipread};
 
 /// Résultat de l'analyse d'un fichier, avant son insertion en bibliothèque.
@@ -16,6 +16,8 @@ use crate::{epub, hash, zipread};
 pub struct Analysis {
     /// Format détecté d'après le contenu.
     pub format: Format,
+    /// Nature de l'œuvre : un CBZ, ou un EPUB reconnu comme manga/BD, est une bande dessinée.
+    pub kind: WorkKind,
     /// Empreinte SHA-256 du fichier (hexadécimal), clé de dédoublonnage.
     pub sha256: String,
     /// Taille du fichier en octets.
@@ -40,6 +42,10 @@ pub struct Analysis {
     /// Titre du chapitre (`Title` de `ComicInfo.xml`, sinon texte suivant son numéro).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chapter_title: Option<String>,
+    /// Sens de lecture annoncé par le fichier (manga droite → gauche : spine EPUB `rtl`,
+    /// `Manga` de `ComicInfo.xml`). Appliqué à la série quand elle est créée.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direction: Option<ReadingDirection>,
     /// Nombre de pages (CBZ uniquement).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub page_count: Option<u32>,
@@ -54,7 +60,9 @@ pub struct Analysis {
 /// l'extension), calcule son empreinte et extrait ses métadonnées.
 ///
 /// - EPUB : métadonnées de l'OPF, couverture déclarée, détection de DRM ;
-///   titre de repli et série éventuelle tirés du nom de fichier.
+///   titre de repli et série éventuelle tirés du nom de fichier. Un EPUB qui est un manga
+///   ou une BD (mise en page fixe, pages-images, sujet, sens `rtl` : voir
+///   [`epub::ComicSignals`]) est classé `comic`, sa série lue aussi dans son titre.
 /// - CBZ (toute archive ZIP contenant des images) : série, volume et chapitre tirés de
 ///   `ComicInfo.xml` s'il est présent, sinon du nom ; titre = nom du fichier ;
 ///   couverture = première page.
@@ -69,7 +77,14 @@ pub fn analyze(name: &str, bytes: &[u8]) -> Result<Analysis> {
 
     if epub::is_epub(&mut archive)? {
         let meta = epub::read_metadata(&mut archive)?;
-        let placement = match (meta.series_title, from_name) {
+        // Un manga en EPUB sans métadonnées de série porte souvent série et volume dans son
+        // titre (« One Piece - Tome 3 ») : on le lit avant le nom du fichier. Pas pour un
+        // roman, dont le titre finit parfois par un nombre (« Fahrenheit 451 »).
+        let from_title = meta
+            .comic
+            .then(|| meta.title.as_deref().and_then(parse_name))
+            .flatten();
+        let placement = match (meta.series_title, from_title.or(from_name)) {
             (Some(series), _) => Placement {
                 series_title: Some(series),
                 volume: meta.volume,
@@ -78,17 +93,24 @@ pub fn analyze(name: &str, bytes: &[u8]) -> Result<Analysis> {
             (None, Some(info)) => Placement::from(info),
             (None, None) => Placement::default(),
         };
+        let kind = if meta.comic {
+            WorkKind::Comic
+        } else {
+            WorkKind::Novel
+        };
         return Ok(Analysis {
             format: Format::Epub,
+            kind,
             sha256,
             size_bytes,
             title: meta.title.unwrap_or(stem),
-            authors: meta.authors,
+            authors: authors_or_name(meta.authors, name),
             language: meta.language,
-            series_title: placement.series_title,
+            series_title: normalized(placement.series_title),
             volume: placement.volume,
             chapter: placement.chapter,
             chapter_title: placement.chapter_title,
+            direction: (meta.comic && meta.rtl).then_some(ReadingDirection::Rtl),
             page_count: None,
             drm: meta.drm,
             cover: meta.cover,
@@ -108,19 +130,37 @@ pub fn analyze(name: &str, bytes: &[u8]) -> Result<Analysis> {
     let placement = Placement::for_comic(&info, from_name);
     Ok(Analysis {
         format: Format::Cbz,
+        kind: WorkKind::Comic,
         sha256,
         size_bytes,
         title: stem,
-        authors: info.writers,
+        authors: authors_or_name(info.writers, name),
         language: info.language,
-        series_title: placement.series_title,
+        series_title: normalized(placement.series_title),
         volume: placement.volume,
         chapter: placement.chapter,
         chapter_title: placement.chapter_title,
+        direction: info.right_to_left.then_some(ReadingDirection::Rtl),
         page_count: Some(page_count),
         drm: false,
         cover: Some(cover),
     })
+}
+
+/// Auteurs des métadonnées, sinon celui d'un nom en segments (Anna's Archive).
+fn authors_or_name(authors: Vec<String>, name: &str) -> Vec<String> {
+    if authors.is_empty() {
+        author_from_name(name).into_iter().collect()
+    } else {
+        authors
+    }
+}
+
+/// Titre de série sous sa forme canonique ([`normalize_series_title`]) ; vide, il disparaît.
+fn normalized(series_title: Option<String>) -> Option<String> {
+    series_title
+        .map(|title| normalize_series_title(&title))
+        .filter(|title| !title.is_empty())
 }
 
 /// Place d'une œuvre dans sa série : série, volume, chapitre.
@@ -242,6 +282,91 @@ mod tests {
         let analysis = analyze("Saga T03.cbz", &bytes).unwrap();
         assert_eq!(analysis.volume, Some(3.0));
         assert_eq!(analysis.chapter, None);
+    }
+
+    const MANGA_META: &str = r#"<meta property="rendition:layout">pre-paginated</meta>
+        <dc:subject>Manga</dc:subject>"#;
+    const RTL: &str = r#"page-progression-direction="rtl""#;
+
+    #[test]
+    fn annas_archive_cbz_is_volume_13_of_one_piece() {
+        let analysis = analyze(fixtures::ANNA_CBZ_NAME, &fixtures::cbz_scan()).unwrap();
+        assert_eq!(analysis.kind, WorkKind::Comic);
+        assert_eq!(analysis.title, "One Piece T013");
+        assert_eq!(analysis.authors, ["Eiichiro Oda"]);
+        assert_eq!(analysis.series_title.as_deref(), Some("One Piece"));
+        assert_eq!(analysis.volume, Some(13.0));
+        assert_eq!(analysis.chapter, None);
+        assert_eq!(analysis.page_count, Some(3));
+    }
+
+    #[test]
+    fn kindle_manga_epub_is_volume_67_of_one_piece() {
+        let analysis = analyze(fixtures::ANNA_EPUB_NAME, &fixtures::epub_kindle_manga()).unwrap();
+        assert_eq!(analysis.format, Format::Epub);
+        assert_eq!(analysis.kind, WorkKind::Comic);
+        assert_eq!(analysis.title, "One Piece, Vol. 67");
+        assert_eq!(analysis.authors, ["Eiichiro Oda"]);
+        assert_eq!(analysis.series_title.as_deref(), Some("One Piece"));
+        assert_eq!(analysis.volume, Some(67.0));
+        assert_eq!(analysis.chapter, None);
+    }
+
+    #[test]
+    fn manga_epub_is_a_comic_in_its_series() {
+        let bytes = fixtures::epub_comic(
+            &format!(
+                "{MANGA_META}<dc:title>One Piece 2</dc:title>
+                 <meta name=\"calibre:series\" content=\"One  Piece\"/>
+                 <meta name=\"calibre:series_index\" content=\"2\"/>"
+            ),
+            RTL,
+            true,
+        );
+        let analysis = analyze("op.epub", &bytes).unwrap();
+        assert_eq!(analysis.format, Format::Epub);
+        assert_eq!(analysis.kind, WorkKind::Comic);
+        assert_eq!(analysis.series_title.as_deref(), Some("One Piece"));
+        assert_eq!(analysis.volume, Some(2.0));
+        assert_eq!(analysis.direction, Some(ReadingDirection::Rtl));
+    }
+
+    #[test]
+    fn manga_epub_series_from_its_title() {
+        let bytes = fixtures::epub_comic(
+            &format!("{MANGA_META}<dc:title>L’Attaque des Titans - Chapitre 139</dc:title>"),
+            "",
+            true,
+        );
+        let analysis = analyze("snk.epub", &bytes).unwrap();
+        assert_eq!(analysis.kind, WorkKind::Comic);
+        assert_eq!(
+            analysis.series_title.as_deref(),
+            Some("L'Attaque des Titans")
+        );
+        assert_eq!(analysis.chapter, Some(139.0));
+        assert_eq!(analysis.direction, None);
+    }
+
+    #[test]
+    fn novel_title_is_not_parsed() {
+        let bytes = fixtures::epub_comic("<dc:title>Fahrenheit 451</dc:title>", RTL, false);
+        let analysis = analyze("f451.epub", &bytes).unwrap();
+        assert_eq!(analysis.kind, WorkKind::Novel);
+        assert_eq!(analysis.series_title, None);
+        assert_eq!(analysis.direction, None);
+    }
+
+    #[test]
+    fn cbz_manga_flag_sets_the_direction() {
+        let bytes = fixtures::cbz_with_comic_info(
+            "<ComicInfo><Manga>YesAndRightToLeft</Manga></ComicInfo>",
+        );
+        let analysis = analyze("Saga v01.cbz", &bytes).unwrap();
+        assert_eq!(analysis.kind, WorkKind::Comic);
+        assert_eq!(analysis.direction, Some(ReadingDirection::Rtl));
+        let plain = analyze("Saga v02.cbz", &fixtures::cbz_p1_to_p12()).unwrap();
+        assert_eq!(plain.direction, None);
     }
 
     #[test]

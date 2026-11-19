@@ -20,6 +20,8 @@ pub struct ComicInfo {
     pub writers: Vec<String>,
     /// Langue (`LanguageISO`).
     pub language: Option<String>,
+    /// Manga à lire de droite à gauche (`Manga` = `YesAndRightToLeft`).
+    pub right_to_left: bool,
 }
 
 fn non_empty(text: &str) -> Option<String> {
@@ -53,6 +55,7 @@ pub fn parse(text: &str) -> Option<ComicInfo> {
             "Title" => info.title = non_empty(text),
             "Writer" => info.writers = text.split(',').filter_map(non_empty).collect(),
             "LanguageISO" => info.language = non_empty(text),
+            "Manga" => info.right_to_left = text.eq_ignore_ascii_case("YesAndRightToLeft"),
             _ => {}
         }
     }
@@ -75,6 +78,7 @@ mod tests {
               <Volume>105</Volume>
               <Writer>Eiichiro Oda, Un Autre</Writer>
               <LanguageISO>fr</LanguageISO>
+              <Manga>YesAndRightToLeft</Manga>
               <Pages><Page Image="0" Type="FrontCover"/></Pages>
             </ComicInfo>"#,
         )
@@ -85,6 +89,7 @@ mod tests {
         assert_eq!(info.title.as_deref(), Some("Le Rêve & l'honneur"));
         assert_eq!(info.writers, ["Eiichiro Oda", "Un Autre"]);
         assert_eq!(info.language.as_deref(), Some("fr"));
+        assert!(info.right_to_left);
     }
 
     #[test]

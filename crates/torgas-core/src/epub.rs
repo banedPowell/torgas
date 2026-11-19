@@ -2,6 +2,7 @@
 
 use crate::cbz::{Page, image_mime};
 use crate::error::{CoreError, Result};
+use crate::naming::fold;
 use crate::xml::{self, Element};
 use crate::zipread::{self, MemArchive};
 
@@ -32,6 +33,64 @@ pub struct EpubMetadata {
     pub cover: Option<Page>,
     /// Le livre est protégé par une DRM et ne pourra pas être lu.
     pub drm: bool,
+    /// Le livre est un manga ou une bande dessinée (voir [`ComicSignals::is_comic`]).
+    pub comic: bool,
+    /// Sens de lecture droite → gauche (`page-progression-direction="rtl"`).
+    pub rtl: bool,
+}
+
+/// Mots-clés de `dc:subject` qui désignent une bande dessinée (minuscules, sans accents).
+const COMIC_SUBJECTS: [&str; 13] = [
+    "manga",
+    "mangas",
+    "manhwa",
+    "manhua",
+    "webtoon",
+    "comic",
+    "comics",
+    "bd",
+    "bande dessinee",
+    "bandes dessinees",
+    "graphic novel",
+    "graphic novels",
+    "roman graphique",
+];
+
+/// Sections du spine examinées pour compter les pages-images (les premières suffisent).
+const SAMPLED_SECTIONS: usize = 60;
+
+/// Indices qu'un EPUB est un manga ou une bande dessinée.
+// Des indices indépendants, chacun lu tel quel dans l'OPF : pas une machine à états.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ComicSignals {
+    /// Mise en page fixe (`rendition:layout` `pre-paginated`, ou `fixed-layout` Kindle).
+    pub fixed_layout: bool,
+    /// `page-progression-direction="rtl"` sur le spine.
+    pub rtl: bool,
+    /// Un `dc:subject` parle de manga, comics, bande dessinée…
+    pub comic_subject: bool,
+    /// Métadonnée Kindle `book-type` à `comic`.
+    pub comic_book_type: bool,
+    /// Sections examinées, et parmi elles celles faites d'une seule image.
+    pub sections: usize,
+    /// Sections constituées d'une seule image (sans texte).
+    pub image_sections: usize,
+}
+
+impl ComicSignals {
+    /// La majorité des sections examinées (au moins deux) sont des pages-images.
+    pub fn mostly_images(&self) -> bool {
+        self.sections >= 2 && self.image_sections * 2 > self.sections
+    }
+
+    /// Verdict : pages-images en majorité, `book-type` comic, ou sujet « manga/BD » confirmé
+    /// par une mise en page fixe ou un sens de lecture droite → gauche.
+    pub fn is_comic(&self) -> bool {
+        self.comic_book_type
+            || self.mostly_images()
+            || (self.comic_subject && (self.fixed_layout || self.rtl))
+    }
 }
 
 /// Indique si l'archive est un EPUB : entrée `mimetype` valant
@@ -67,6 +126,9 @@ pub(crate) fn read_metadata<B: AsRef<[u8]>>(archive: &mut MemArchive<B>) -> Resu
     let elements = xml::parse(&opf_path, &opf)?;
     let mut meta = parse_opf(&elements);
     meta.drm = drm;
+    let signals = comic_signals(archive, &opf_path, &elements);
+    meta.comic = signals.is_comic();
+    meta.rtl = signals.rtl;
 
     if let Some((href, mime)) = cover_item(&elements) {
         let path = resolve_href(&opf_path, &href);
@@ -196,6 +258,101 @@ fn parse_opf(elements: &[Element]) -> EpubMetadata {
         meta.volume = position;
     }
     meta
+}
+
+/// Un sujet (`dc:subject`) désigne-t-il une bande dessinée ? Comparaison par mots entiers :
+/// « Comics & Graphic Novels / Manga », « Bande dessinée », « BD » le sont, « Bdsm » non.
+fn is_comic_subject(subject: &str) -> bool {
+    let words: Vec<String> = fold(subject)
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|word| !word.is_empty())
+        .map(str::to_owned)
+        .collect();
+    let joined = format!(" {} ", words.join(" "));
+    COMIC_SUBJECTS
+        .iter()
+        .any(|keyword| joined.contains(&format!(" {keyword} ")))
+}
+
+/// Une section XHTML est-elle une page-image : une seule image (`img` ou `image` SVG) dans
+/// le corps, et (presque) pas de texte ? Un document illisible n'en est pas une.
+fn is_image_page(path: &str, xhtml: &str) -> bool {
+    let Ok(elements) = xml::parse(path, xhtml) else {
+        return false;
+    };
+    let body: Vec<&Element> = elements
+        .iter()
+        .filter(|e| e.is_inside("body") && !e.is_inside("script") && !e.is_inside("style"))
+        .collect();
+    let images = body
+        .iter()
+        .filter(|e| e.name == "img" || e.name == "image")
+        .count();
+    let text: usize = body
+        .iter()
+        .filter(|e| e.name != "script" && e.name != "style")
+        .map(|e| e.text.chars().filter(|c| !c.is_whitespace()).count())
+        .sum();
+    images == 1 && text <= 40
+}
+
+/// Rassemble les indices « manga/BD » d'un EPUB : métadonnées de l'OPF, sens du spine et
+/// nature des premières sections.
+fn comic_signals<B: AsRef<[u8]>>(
+    archive: &mut MemArchive<B>,
+    opf_path: &str,
+    elements: &[Element],
+) -> ComicSignals {
+    let in_metadata = || elements.iter().filter(|e| e.is_inside("metadata"));
+    let mut signals = ComicSignals {
+        fixed_layout: in_metadata().any(|e| {
+            e.name == "meta"
+                && ((e.attr("property") == Some("rendition:layout") && e.text == "pre-paginated")
+                    || (e.attr("name") == Some("fixed-layout")
+                        && e.attr("content") == Some("true")))
+        }),
+        rtl: elements
+            .iter()
+            .any(|e| e.name == "spine" && e.attr("page-progression-direction") == Some("rtl")),
+        comic_subject: in_metadata().any(|e| e.name == "subject" && is_comic_subject(&e.text)),
+        comic_book_type: in_metadata().any(|e| {
+            e.name == "meta"
+                && e.attr("name") == Some("book-type")
+                && e.attr("content")
+                    .is_some_and(|c| c.eq_ignore_ascii_case("comic"))
+        }),
+        ..ComicSignals::default()
+    };
+
+    let items: Vec<&Element> = elements
+        .iter()
+        .filter(|e| e.name == "item" && e.is_inside("manifest"))
+        .collect();
+    let spine = elements
+        .iter()
+        .filter(|e| e.name == "itemref" && e.is_inside("spine"))
+        .filter_map(|itemref| {
+            let id = itemref.attr("idref")?;
+            items.iter().find(|item| item.attr("id") == Some(id))
+        })
+        .take(SAMPLED_SECTIONS);
+    for item in spine {
+        let (Some(href), mime) = (item.attr("href"), item.attr("media-type").unwrap_or("")) else {
+            continue;
+        };
+        signals.sections += 1;
+        let image_page = if mime.starts_with("image/") {
+            true
+        } else {
+            let path = resolve_href(opf_path, href);
+            zipread::read_text(archive, &path)
+                .ok()
+                .flatten()
+                .is_some_and(|xhtml| is_image_page(&path, &xhtml))
+        };
+        signals.image_sections += usize::from(image_page);
+    }
+    signals
 }
 
 /// Repère l'image de couverture dans le manifeste : `properties="cover-image"`
@@ -348,6 +505,104 @@ mod tests {
     fn missing_opf_is_invalid() {
         let err = metadata(&fixtures::epub_without_opf()).unwrap_err();
         assert!(matches!(err, CoreError::InvalidEpub(_)));
+    }
+
+    const FIXED: &str = r#"<meta property="rendition:layout">pre-paginated</meta>"#;
+    const MANGA: &str = "<dc:subject>Comics &amp; Graphic Novels / Manga</dc:subject>";
+
+    fn signals(metadata: &str, spine: &str, images: bool) -> ComicSignals {
+        let bytes = fixtures::epub_comic(metadata, spine, images);
+        let mut archive = zipread::open(bytes.as_slice()).unwrap();
+        let opf_path = opf_path(&mut archive).unwrap();
+        let opf = zipread::read_text(&mut archive, &opf_path)
+            .unwrap()
+            .unwrap();
+        let elements = xml::parse(&opf_path, &opf).unwrap();
+        comic_signals(&mut archive, &opf_path, &elements)
+    }
+
+    #[test]
+    fn reads_comic_signals() {
+        let s = signals(
+            &format!("{FIXED}{MANGA}<dc:title>T</dc:title>"),
+            r#"page-progression-direction="rtl""#,
+            true,
+        );
+        assert_eq!(
+            s,
+            ComicSignals {
+                fixed_layout: true,
+                rtl: true,
+                comic_subject: true,
+                comic_book_type: false,
+                sections: 4,
+                image_sections: 4,
+            }
+        );
+        assert!(s.is_comic());
+    }
+
+    #[test]
+    fn image_pages_alone_make_a_comic() {
+        let s = signals("<dc:title>T</dc:title>", "", true);
+        assert!(s.mostly_images());
+        assert!(s.is_comic());
+    }
+
+    #[test]
+    fn subject_needs_layout_or_direction() {
+        let text_only = signals(&format!("{MANGA}<dc:title>T</dc:title>"), "", false);
+        assert!(text_only.comic_subject);
+        assert!(
+            !text_only.is_comic(),
+            "un essai sur le manga reste un livre"
+        );
+        let rtl = signals(
+            &format!("{MANGA}<dc:title>T</dc:title>"),
+            r#"page-progression-direction="rtl""#,
+            false,
+        );
+        assert!(rtl.is_comic());
+        let fixed = signals(&format!("{FIXED}<dc:title>T</dc:title>"), "", false);
+        assert!(
+            fixed.fixed_layout && !fixed.is_comic(),
+            "album illustré à mise en page fixe"
+        );
+        let kindle = signals(
+            r#"<meta name="book-type" content="comic"/><dc:title>T</dc:title>"#,
+            "",
+            false,
+        );
+        assert!(kindle.is_comic());
+    }
+
+    #[test]
+    fn novels_are_not_comics() {
+        for bytes in [
+            fixtures::epub2(),
+            fixtures::epub3(),
+            fixtures::epub_minimal(),
+        ] {
+            let meta = metadata(&bytes).unwrap();
+            assert!(!meta.comic);
+            assert!(!meta.rtl);
+        }
+    }
+
+    #[test]
+    fn comic_subjects() {
+        for subject in [
+            "Manga",
+            "Bande dessinée",
+            "BD jeunesse",
+            "COMICS",
+            "Roman graphique",
+        ] {
+            assert!(is_comic_subject(subject), "{subject}");
+        }
+        for subject in ["Bdsm", "Mangaka", "Roman", "Science-fiction"] {
+            assert!(!is_comic_subject(subject), "{subject}");
+        }
     }
 
     #[test]

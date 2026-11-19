@@ -235,6 +235,93 @@ pub fn cbz_with_folders() -> Vec<u8> {
     ])
 }
 
+/// Page XHTML faite d'une seule image (manga en EPUB).
+fn image_page(n: u32) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>p{n}</title></head>
+<body><div class="page"><img src="images/p{n}.jpg" alt="Page {n}"/></div></body></html>"#
+    )
+}
+
+/// EPUB d'un manga : `metadata` est inséré dans `<metadata>`, `spine_attrs` dans `<spine>` ;
+/// quatre sections d'une image (`image_pages`) ou de texte.
+pub fn epub_comic(metadata: &str, spine_attrs: &str, image_pages: bool) -> Vec<u8> {
+    let opf = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    {metadata}
+  </metadata>
+  <manifest>
+    <item id="p1" href="p1.xhtml" media-type="application/xhtml+xml"/>
+    <item id="p2" href="p2.xhtml" media-type="application/xhtml+xml"/>
+    <item id="p3" href="p3.xhtml" media-type="application/xhtml+xml"/>
+    <item id="p4" href="p4.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine {spine_attrs}>
+    <itemref idref="p1"/><itemref idref="p2"/><itemref idref="p3"/><itemref idref="p4"/>
+  </spine>
+</package>"#
+    );
+    let pages: Vec<(String, Vec<u8>)> = (1..=4)
+        .map(|n| {
+            let body = if image_pages {
+                image_page(n).into_bytes()
+            } else {
+                CHAPTER.to_vec()
+            };
+            (format!("OEBPS/p{n}.xhtml"), body)
+        })
+        .collect();
+    let images: Vec<(String, Vec<u8>)> = (1..=4)
+        .map(|n| (format!("OEBPS/images/p{n}.jpg"), jpeg_bytes(n)))
+        .collect();
+    let extra: Vec<(&str, &[u8])> = pages
+        .iter()
+        .chain(&images)
+        .map(|(name, bytes)| (name.as_str(), bytes.as_slice()))
+        .collect();
+    epub_with(&opf, &extra)
+}
+
+/// Nom d'un CBZ téléchargé sur Anna's Archive (segments ` -- `, sans `ComicInfo.xml`).
+pub const ANNA_CBZ_NAME: &str = "One Piece T013 -- Eiichiro Oda -- 2014 -- Glénat Manga -- \
+    isbn13 9782331011634 -- 084d0c76c3d6157912abf8e80f0c6bca -- Anna’s Archive.cbz";
+
+/// Nom d'un EPUB Kindle de la même série, téléchargé sur Anna's Archive.
+pub const ANNA_EPUB_NAME: &str = "One Piece, Vol_ 67 67 -- Oda, Eiichiro -- One Piece #67, \
+    2013 -- VIZ Media LLC -- 581d0c76c3d6157912abf8e80f0c6bca -- Anna’s Archive.epub";
+
+/// CBZ façon scan d'éditeur : pages `109-00.jpg`, `109-01.jpg`…, pas de `ComicInfo.xml`.
+pub fn cbz_scan() -> Vec<u8> {
+    let pages: Vec<(String, Vec<u8>)> = (0..3)
+        .map(|n| (format!("109-{n:02}.jpg"), jpeg_bytes(100 + n)))
+        .collect();
+    let entries: Vec<(&str, &[u8])> = pages
+        .iter()
+        .map(|(name, bytes)| (name.as_str(), bytes.as_slice()))
+        .collect();
+    zip(&entries)
+}
+
+/// EPUB Kindle d'un manga (métadonnées seules : `fixed-layout`, `book-type` comic, sujets),
+/// titre `One Piece, Vol. 67`.
+pub fn epub_kindle_manga() -> Vec<u8> {
+    epub_comic(
+        r#"<dc:title>One Piece, Vol. 67</dc:title>
+           <dc:creator>Eiichiro Oda</dc:creator>
+           <dc:subject>Manga</dc:subject>
+           <dc:subject>Comics &amp; Graphic Novels</dc:subject>
+           <dc:language>en</dc:language>
+           <meta name="fixed-layout" content="true"/>
+           <meta name="book-type" content="comic"/>"#,
+        "",
+        false,
+    )
+}
+
 /// CBZ de deux pages accompagné de `ComicInfo.xml` (contenu `xml`).
 pub fn cbz_with_comic_info(xml: &str) -> Vec<u8> {
     let (p1, p2) = (jpeg_bytes(1), jpeg_bytes(2));
