@@ -49,9 +49,26 @@ describe('createWheelGesture', () => {
     expect(gesture.push({ ...wheel(40, 1000), ctrlKey: true }, 800).consume).toBe(false)
   })
 
-  it('commence un nouveau geste après un silence', () => {
+  it('garde le geste ouvert pendant une pause doigts posés', () => {
+    const gesture = createWheelGesture()
+    play(gesture, [20, 20])
+    // Arrêt net : doigts sans doute encore posés, on attend longtemps avant d'aimanter.
+    expect(gesture.endDelay()).toBe(1200)
+    // Ils repartent une seconde plus tard : même geste, même décalage.
+    expect(gesture.push(wheel(20, 1000), 800).offset).toBe(60)
+  })
+
+  it("aimante vite quand l'inertie s'éteint (doigts levés)", () => {
+    const gesture = createWheelGesture()
+    play(gesture, [30, 30, 20, 9, 4, 2, 1])
+    expect(gesture.endDelay()).toBe(90)
+    expect(gesture.finish().commit).toBe(1)
+  })
+
+  it('commence un nouveau geste après la fin du précédent', () => {
     const gesture = createWheelGesture()
     play(gesture, [50])
+    gesture.finish()
     expect(gesture.push(wheel(10, 500), 800).offset).toBe(10)
   })
 })

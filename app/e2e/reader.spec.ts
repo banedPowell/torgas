@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from './test'
 import {
   CBZ_PAGES,
@@ -76,6 +77,13 @@ test.describe('Lecteur EPUB : notes et barre', () => {
   })
 })
 
+/** Glissement à deux doigts puis doigts levés : mouvement soutenu, puis inertie qui s'éteint. */
+async function swipe(page: Page, dir: 1 | -1) {
+  for (const d of [30, 30, 30, 30, 30, 30, 30, 30, 20, 12, 6, 3, 1]) {
+    await page.mouse.wheel(dir * d, 0)
+  }
+}
+
 test.describe('Trackpad : glissement horizontal', () => {
   test.use({ viewport: { width: 800, height: 1000 } })
 
@@ -85,14 +93,14 @@ test.describe('Trackpad : glissement horizontal', () => {
     await openFromLibrary(page, CBZ_TITLE)
     await expect(page.getByRole('img', { name: `Page 1 sur ${CBZ_PAGES}` })).toBeVisible()
 
-    // Un geste = une rafale d'événements wheel (inertie comprise) : une seule page tournée.
+    // Un geste = une rafale d'événements wheel puis l'inertie qui s'éteint : une seule page.
     await page.mouse.move(400, 600)
-    for (let i = 0; i < 8; i++) await page.mouse.wheel(30, 0)
+    await swipe(page, 1)
     await expect(page.getByRole('img', { name: `Page 2 sur ${CBZ_PAGES}` })).toBeVisible()
     await expect(page.getByRole('img', { name: `Page 3 sur ${CBZ_PAGES}` })).toBeHidden()
 
     await page.waitForTimeout(400)
-    for (let i = 0; i < 8; i++) await page.mouse.wheel(-30, 0)
+    await swipe(page, -1)
     await expect(page.getByRole('img', { name: `Page 1 sur ${CBZ_PAGES}` })).toBeVisible()
   })
 
@@ -105,7 +113,7 @@ test.describe('Trackpad : glissement horizontal', () => {
     const before = await progress.innerText()
 
     await page.mouse.move(640, 500)
-    for (let i = 0; i < 8; i++) await page.mouse.wheel(30, 0)
+    await swipe(page, 1)
     await expect(progress).not.toHaveText(before)
   })
 })

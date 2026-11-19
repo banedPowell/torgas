@@ -103,15 +103,13 @@ watch(toc.entries, () => lastDetail && onRelocate(lastDetail))
 // Glissement à deux doigts au trackpad, façon Livres d'Apple : le texte suit les doigts (via le
 // paginateur de foliate, comme au toucher), puis s'aimante sur la page voisine ou revient.
 // Les événements horizontaux sont interceptés : le navigateur n'y voit pas « page précédente ».
-const wheelGesture = createWheelGesture()
-const endWheelGesture = useDebounceFn(() => {
+const wheelGesture = useWheelGesture(({ commit, offset }) => {
   const renderer = view.value?.renderer
-  const { commit, offset } = wheelGesture.finish()
   if (!renderer?.size) return
   // Décalage restant (en pages) pour atteindre la page visée depuis la position actuelle.
   const shift = (commit * renderer.size - offset) / renderer.size
   renderer.snap(shift, shift)
-}, wheelGesture.gestureGap)
+})
 
 function onWheel(e: WheelEvent) {
   const renderer = view.value?.renderer
@@ -130,7 +128,6 @@ function onWheel(e: WheelEvent) {
   if (!consume) return
   e.preventDefault()
   if (move) renderer.scrollBy(move, move)
-  void endWheelGesture()
 }
 
 function onSectionLoad(doc: Document) {

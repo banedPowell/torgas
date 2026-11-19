@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ReadingDirection } from '~/types/core'
 import { comicTapAction, type ComicFit, type ComicSide } from '~/utils/comic'
+import type { WheelCommit } from '~/utils/wheel'
 
 /**
  * Lecture page à page : zones de tap (bande du haut, gauche, centre, droite) et glissement.
@@ -32,14 +33,12 @@ function onClick(event: MouseEvent) {
 
 // Glissement à deux doigts au trackpad, façon Livres d'Apple : la planche suit les doigts, puis
 // sort de l'écran pendant que la suivante entre (ou revient en place si le geste est annulé).
-const wheelGesture = createWheelGesture()
 /** Décalage horizontal de la planche (px, positif vers la gauche de l'écran). */
 const slide = ref(0)
 const sliding = ref(false)
 const SLIDE_MS = 180
 
-async function finishWheelGesture() {
-  const { commit } = wheelGesture.finish()
+async function finishWheelGesture({ commit }: { commit: WheelCommit }) {
   const width = stage.value?.clientWidth ?? 0
   const side = wheelSide(commit)
   sliding.value = true
@@ -58,7 +57,7 @@ async function finishWheelGesture() {
   sliding.value = true
   slide.value = 0
 }
-const endWheelGesture = useDebounceFn(finishWheelGesture, wheelGesture.gestureGap)
+const wheelGesture = useWheelGesture(finishWheelGesture)
 
 // Écouté sur la fenêtre : le navigateur envoie toute une série d'événements wheel à l'élément
 // visé par le premier, qui peut être une planche déjà remplacée (inertie après le changement).
@@ -91,7 +90,6 @@ useEventListener(
     e.preventDefault()
     sliding.value = false
     slide.value = offset
-    void endWheelGesture()
   },
   { passive: false },
 )
