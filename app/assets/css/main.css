@@ -26,12 +26,15 @@
   --color-custom-neutral-900: oklch(28.9% 0.007 78.941);
   --color-custom-neutral-950: oklch(22.3% 0.006 78.189);
 
-  /* Primaire : brique (500 ≈ #8D3130, 400 ≈ #BE4F3E) */
+  /*
+   * Primaire : brique (500 ≈ #8D3130). Le 400 est éclairci par rapport à la maquette (#BE4F3E)
+   * pour atteindre 4,5:1 en texte sur les fonds sombres (voir « Contraste » plus bas).
+   */
   --color-custom-primary-50: oklch(92.8% 0.042 52.207);
   --color-custom-primary-100: oklch(86.7% 0.081 52.002);
   --color-custom-primary-200: oklch(77.2% 0.15 51.233);
   --color-custom-primary-300: oklch(66.8% 0.168 45.46);
-  --color-custom-primary-400: oklch(56.9% 0.147 30.887);
+  --color-custom-primary-400: oklch(68% 0.15 31);
   --color-custom-primary-500: oklch(44.7% 0.126 24.26);
   --color-custom-primary-600: oklch(33.4% 0.101 33.423);
   --color-custom-primary-700: oklch(24.3% 0.074 36.856);
@@ -69,11 +72,16 @@
   --ui-border-inverted: var(--ui-color-neutral-900);
 
   --ui-text: var(--ui-color-neutral-800);
-  --ui-text-dimmed: var(--ui-color-neutral-500);
-  --ui-text-muted: var(--ui-color-neutral-600);
+  /* Contraste : la maquette (muted = 600) donne 3,2:1 sur le fond ; 700 donne 5,7:1. */
+  --ui-text-dimmed: var(--ui-color-neutral-600);
+  --ui-text-muted: var(--ui-color-neutral-700);
   --ui-text-toned: var(--ui-color-neutral-700);
   --ui-text-highlighted: var(--ui-color-neutral-950);
   --ui-text-inverted: var(--ui-color-neutral-50);
+
+  /* Pastille posée sur une couverture (format, série) : lisible sur n'importe quelle image. */
+  --ui-scrim: oklch(22.3% 0.006 78.189 / 0.85);
+  --ui-on-scrim: oklch(96% 0.008 82);
 }
 
 /* Jetons sémantiques, sombre */
@@ -95,6 +103,30 @@
   --ui-text-toned: var(--ui-color-neutral-300);
   --ui-text-highlighted: var(--ui-color-neutral-50);
   --ui-text-inverted: var(--ui-color-neutral-950);
+}
+
+/*
+ * Couleurs d'état (alertes, notifications) : en clair, la teinte 500 de Nuxt UI donne 1,6 à 2,9:1
+ * sur le papier ; les teintes 800 (700 pour info) dépassent 4,5:1. En sombre, la teinte 400 suffit.
+ */
+:root {
+  --ui-success: var(--ui-color-success-800);
+  --ui-info: var(--ui-color-info-700);
+  --ui-warning: var(--ui-color-warning-800);
+  --ui-error: var(--ui-color-error-800);
+}
+
+.dark {
+  --ui-success: var(--ui-color-success-400);
+  --ui-info: var(--ui-color-info-400);
+  --ui-warning: var(--ui-color-warning-400);
+  --ui-error: var(--ui-color-error-400);
+}
+
+/* Jetons ajoutés au thème Tailwind : `bg-scrim`, `text-on-scrim`. */
+@theme inline {
+  --color-scrim: var(--ui-scrim);
+  --color-on-scrim: var(--ui-on-scrim);
 }
 
 /*

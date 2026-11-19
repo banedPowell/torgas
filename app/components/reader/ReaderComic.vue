@@ -78,7 +78,7 @@ defineShortcuts(
 </script>
 
 <template>
-  <div class="relative size-full overflow-hidden bg-black">
+  <div class="relative size-full overflow-hidden bg-default">
     <div
       v-if="reader.state.value === 'idle' || reader.state.value === 'loading'"
       role="status"
@@ -194,10 +194,10 @@ defineShortcuts(
       <ComicSettings
         v-model:open="settingsOpen"
         :direction="reader.direction.value"
-        @update:direction="setDirection"
         :layout="settings.layout.value"
         :fit="settings.fit.value"
         :in-series="!!reader.series.value"
+        @update:direction="setDirection"
         @update:layout="settings.setLayout"
         @update:fit="settings.setFit"
       />

@@ -34,15 +34,17 @@ const showDirection = computed(() => series.value && meta.value?.kind === 'comic
 <template>
   <UDashboardPanel id="work" class="min-h-0 flex-1">
     <template #header>
-      <div class="px-2 pt-4 sm:px-4 lg:px-6">
+      <div class="px-2 pt-3 pb-1 sm:px-4 lg:px-6 lg:pt-4">
         <UButton
           to="/"
-          icon="i-lucide-arrow-left"
+          icon="i-lucide-chevron-left"
           color="neutral"
           variant="ghost"
-          size="lg"
-          :label="$t('work.back')"
-        />
+          size="xl"
+          class="min-h-11 min-w-11 justify-center"
+        >
+          <span class="sr-only lg:not-sr-only">{{ $t('work.back') }}</span>
+        </UButton>
       </div>
     </template>
 
@@ -62,7 +64,7 @@ const showDirection = computed(() => series.value && meta.value?.kind === 'comic
           </div>
         </div>
         <div class="flex flex-col gap-4">
-          <USkeleton class="h-13 w-full rounded-xl" />
+          <USkeleton class="h-13 w-full rounded-lg" />
           <USkeleton class="h-3 w-full" />
           <USkeleton v-for="n in 3" :key="n" class="h-16 w-full" />
         </div>
@@ -92,7 +94,7 @@ const showDirection = computed(() => series.value && meta.value?.kind === 'comic
         class="mx-auto grid w-full max-w-5xl items-start gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-10"
       >
         <WorkHeader :meta="meta">
-          <div v-if="status" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+          <div v-if="status" class="flex flex-wrap items-center gap-1.5">
             <WorkStatusSelect
               v-if="work"
               :model-value="work.status"
@@ -103,9 +105,9 @@ const showDirection = computed(() => series.value && meta.value?.kind === 'comic
               v-else
               :label="$t(`status.${status}`)"
               color="neutral"
-              variant="subtle"
-              size="lg"
-              class="justify-self-start"
+              variant="soft"
+              size="md"
+              class="rounded-sm bg-accented px-2 py-1 text-xs font-normal text-highlighted"
             />
             <WorkDirection
               v-if="showDirection && series"
@@ -125,6 +127,7 @@ const showDirection = computed(() => series.value && meta.value?.kind === 'comic
           />
           <WorkProgress :progress="progress" :summary="summary" />
           <WorkVolumes v-if="series" :rows="rows" :next-id="next?.id" :missing="missing" />
+          <WorkDetails :meta="meta" class="lg:hidden" />
         </div>
       </div>
     </template>

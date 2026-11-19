@@ -29,6 +29,6 @@ const icon = computed(() =>
     size="xl"
     block
     :label="label"
-    class="h-13 justify-center rounded-xl text-base font-semibold"
+    class="h-13 justify-center rounded-lg text-base font-semibold"
   />
 </template>

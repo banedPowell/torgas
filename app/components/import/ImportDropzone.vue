@@ -79,7 +79,13 @@ defineExpose({ open: () => input.value?.click() })
     :label="$t('import.drop.title')"
     :description="$t('import.drop.description')"
     class="w-full"
-    :ui="{ base: 'border-2 border-accented bg-default py-6', avatar: 'text-primary' }"
+    :ui="{
+      base: 'rounded-[14px] border-2 border-dashed border-accented bg-default px-4 py-[22px]',
+      avatar: 'size-7 text-primary',
+      icon: 'size-7 text-primary',
+      label: 'mt-1 text-sm font-semibold text-highlighted',
+      description: 'mt-0 text-xs text-muted',
+    }"
     @update:model-value="onSelect"
     @reject="send"
   />

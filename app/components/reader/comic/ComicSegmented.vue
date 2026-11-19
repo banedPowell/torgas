@@ -12,7 +12,7 @@ const model = defineModel<T>({ required: true })
   <div
     role="group"
     :aria-label="label"
-    class="grid gap-1 rounded-xl bg-muted p-1"
+    class="grid gap-1 rounded-lg bg-muted p-1"
     :class="options.length > 3 ? 'grid-cols-2' : 'auto-cols-fr grid-flow-col'"
   >
     <button
