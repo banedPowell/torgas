@@ -15,7 +15,8 @@ use uuid::Uuid;
 use crate::analysis::Analysis;
 use crate::error::{CoreError, Result};
 use crate::model::{
-    Bookmark, Locator, ReadingDirection, ReadingSession, ReadingStatus, Series, Work,
+    Bookmark, FINISHED_THRESHOLD, Locator, ReadingDirection, ReadingSession, ReadingStatus, Series,
+    Work,
 };
 use crate::schema::{SCHEMA_SQL, SCHEMA_VERSION};
 
@@ -321,8 +322,10 @@ impl Library {
 
     /// Enregistre la position de lecture et met à jour la progression.
     ///
-    /// Une progression positive passe l'œuvre « en cours » ; 100 % la passe
-    /// « terminée ». Une œuvre déjà terminée le reste en cas de relecture.
+    /// Une progression positive passe l'œuvre « en cours » ; à partir de
+    /// [`FINISHED_THRESHOLD`] (0,995, le dernier écran d'un EPUB n'atteint pas
+    /// toujours 1) elle passe « terminée ». Une œuvre déjà terminée le reste en
+    /// cas de relecture.
     pub fn save_locator(&mut self, work_id: &str, locator: &Locator) -> Result<Work> {
         check_fraction("progression", locator.progress)?;
         self.require_work(work_id)?;
@@ -348,15 +351,15 @@ impl Library {
                 progress = ?2,
                 last_read_at = ?3,
                 status = CASE
-                    WHEN ?2 >= 1 THEN 'finished'
+                    WHEN ?2 >= ?4 THEN 'finished'
                     WHEN status = 'finished' THEN status
                     WHEN ?2 > 0 THEN 'reading'
                     ELSE status END,
                 started_at = CASE WHEN ?2 > 0 THEN COALESCE(started_at, ?3) ELSE started_at END,
                 finished_at = CASE
-                    WHEN ?2 >= 1 AND status <> 'finished' THEN ?3 ELSE finished_at END
+                    WHEN ?2 >= ?4 AND status <> 'finished' THEN ?3 ELSE finished_at END
              WHERE work_id = ?1",
-            params![work_id, locator.progress, now],
+            params![work_id, locator.progress, now, FINISHED_THRESHOLD],
         )?;
         tx.commit()?;
         self.require_work(work_id)

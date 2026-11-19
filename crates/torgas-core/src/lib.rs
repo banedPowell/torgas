@@ -34,8 +34,8 @@ pub use analysis::{Analysis, analyze};
 pub use cbz::{CbzArchive, Page};
 pub use error::{CoreError, Result};
 pub use model::{
-    Bookmark, Format, Locator, ReadingDirection, ReadingSession, ReadingStatus, Series, Work,
-    WorkKind,
+    Bookmark, FINISHED_THRESHOLD, Format, Locator, ReadingDirection, ReadingSession, ReadingStatus,
+    Series, Work, WorkKind,
 };
 pub use schema::{SCHEMA_SQL, SCHEMA_VERSION};
 
