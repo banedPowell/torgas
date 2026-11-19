@@ -17,6 +17,7 @@
     "lint": "pnpm --filter app lint",
     "pretest": "pnpm ensure:wasm",
     "test": "pnpm --filter app test",
+    "test:e2e": "pnpm --filter app test:e2e",
     "tauri": "tauri"
   },
   "devDependencies": {

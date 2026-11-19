@@ -4,8 +4,8 @@ import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt(
   {
-    // Code tiers vendu tel quel (voir vendor/foliate-js/VERSION).
-    ignores: ['vendor/**'],
+    // Code tiers vendu tel quel (voir vendor/foliate-js/VERSION) et sorties de Playwright.
+    ignores: ['vendor/**', 'test-results/**', 'playwright-report/**'],
   },
   {
     rules: {
