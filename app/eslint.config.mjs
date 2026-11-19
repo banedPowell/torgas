@@ -4,6 +4,10 @@ import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt(
   {
+    // Code tiers vendu tel quel (voir vendor/foliate-js/VERSION).
+    ignores: ['vendor/**'],
+  },
+  {
     rules: {
       // Pages et layouts Nuxt portent des noms d'un seul mot (index, default…).
       'vue/multi-word-component-names': 'off',

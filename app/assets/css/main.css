@@ -97,6 +97,59 @@
   --ui-text-inverted: var(--ui-color-neutral-950);
 }
 
+/*
+ * Thèmes du lecteur (artboards LecteurEPUB / LecteurEPUBSombre), appliqués sur la racine
+ * du lecteur via `data-reader-theme`, quel que soit le mode de l'app. Fond = --ui-bg,
+ * barres = --ui-bg-elevated, filets = --ui-border, accent = --ui-primary.
+ */
+[data-reader-theme='paper'] {
+  color-scheme: light;
+  --ui-primary: var(--ui-color-primary-500);
+  --ui-bg: var(--ui-color-neutral-100);
+  --ui-bg-elevated: var(--ui-color-neutral-50);
+  --ui-bg-accented: var(--ui-color-neutral-300);
+  --ui-border: var(--ui-color-neutral-300);
+  --ui-text: var(--ui-color-neutral-950);
+  --ui-text-muted: var(--ui-color-neutral-700);
+  --ui-text-highlighted: var(--ui-color-neutral-950);
+}
+
+[data-reader-theme='sepia'] {
+  color-scheme: light;
+  --ui-primary: var(--ui-color-primary-500);
+  --ui-bg: #f1e3c8;
+  --ui-bg-elevated: #f6ebd6;
+  --ui-bg-accented: #dcc8a4;
+  --ui-border: #dcc8a4;
+  --ui-text: #3e2c1a;
+  --ui-text-muted: #6b5236;
+  --ui-text-highlighted: #3e2c1a;
+}
+
+[data-reader-theme='dark'] {
+  color-scheme: dark;
+  --ui-primary: var(--ui-color-primary-400);
+  --ui-bg: var(--ui-color-neutral-950);
+  --ui-bg-elevated: var(--ui-color-neutral-900);
+  --ui-bg-accented: var(--ui-color-neutral-700);
+  --ui-border: var(--ui-color-neutral-800);
+  --ui-text: var(--ui-color-neutral-300);
+  --ui-text-muted: var(--ui-color-neutral-500);
+  --ui-text-highlighted: var(--ui-color-neutral-50);
+}
+
+[data-reader-theme='black'] {
+  color-scheme: dark;
+  --ui-primary: var(--ui-color-primary-400);
+  --ui-bg: #000;
+  --ui-bg-elevated: #0e0d0c;
+  --ui-bg-accented: #34302a;
+  --ui-border: #26231f;
+  --ui-text: #bdb3a2;
+  --ui-text-muted: #8f8678;
+  --ui-text-highlighted: #d5cec0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

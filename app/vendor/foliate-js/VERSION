@@ -1,0 +1,18 @@
+foliate-js — https://github.com/johnfactotum/foliate-js
+Commit : 78914aef4466eb960965702401634c2cb348e9b1 (2026-05-01)
+Licence : MIT (voir LICENSE), copyright (c) 2022 John Factotum
+
+Fichiers repris tels quels :
+  view.js, epub.js, epubcfi.js, paginator.js, fixed-layout.js, progress.js,
+  overlayer.js, text-walker.js, search.js, tts.js, comic-book.js, fb2.js, mobi.js,
+  vendor/zip.js, vendor/fflate.js
+(view.js les importe tous, statiquement ou dynamiquement : ils doivent exister pour le build ;
+seuls ceux utiles au format ouvert sont téléchargés.)
+
+Écarts avec l'amont :
+  - pdf.js : remplacé par un module minimal qui refuse les PDF (PDF.js n'est pas vendu,
+    le PDF est hors périmètre de la phase 0) ;
+  - view.d.ts : déclarations TypeScript propres à Torgas (sous-ensemble utilisé par l'app).
+
+Mise à jour : télécharger l'archive du commit voulu (gh api repos/johnfactotum/foliate-js/tarball/<sha>),
+recopier les fichiers ci-dessus, puis mettre à jour ce fichier.
