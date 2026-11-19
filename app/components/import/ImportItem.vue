@@ -56,7 +56,7 @@ const alert = computed<{ color: AlertColor; icon: string; text: string } | null>
       <ULink
         v-if="item.work"
         :to="`/works/${item.work.id}`"
-        class="font-medium text-primary"
+        class="inline-flex min-h-11 items-center font-medium text-primary"
         :aria-label="$t('import.open', { title: item.work.title })"
       >
         {{ item.work.title }}

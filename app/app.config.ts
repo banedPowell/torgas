@@ -21,9 +21,13 @@ export default defineAppConfig({
     // Curseurs de la maquette : poignée pleine de la couleur d'accent.
     slider: {
       variants: { color: { primary: { thumb: 'bg-primary ring-primary outline-primary/25' } } },
-      // Piste de 4 px et poignée de 18 px (lecteurs).
+      // Piste de 4 px et poignée de 18 px (lecteurs) ; la zone de prise fait 44 px sans changer la mise en page.
       compoundVariants: [
-        { orientation: 'horizontal', size: 'lg', class: { track: 'h-1', thumb: 'size-[18px]' } },
+        {
+          orientation: 'horizontal',
+          size: 'lg',
+          class: { root: 'min-h-11 -my-2.5', track: 'h-1', thumb: 'size-[18px]' },
+        },
       ],
     },
   },
