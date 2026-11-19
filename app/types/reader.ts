@@ -31,6 +31,17 @@ export interface ReaderPosition {
 /** Entrée de sommaire aplatie (profondeur pour l'indentation). */
 export interface ReaderTocEntry {
   label: string
+  /** Cible foliate : chemin dans le livre (avec ancre éventuelle) ou CFI. */
   href: string
   depth: number
+  /** Index de la section du spine visée (`-1` si la cible est introuvable). */
+  index?: number
+  /** Début de l'entrée dans sa section, de 0 à 1 (estimé sur le texte ; 0 en tête de section). */
+  offset?: number
+}
+
+/** Sommaire normalisé : vraies entrées d'un côté, appels de notes de l'autre. */
+export interface ReaderToc {
+  entries: ReaderTocEntry[]
+  notes: ReaderTocEntry[]
 }

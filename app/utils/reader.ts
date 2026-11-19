@@ -1,10 +1,4 @@
-import type {
-  ReaderFont,
-  ReaderMargin,
-  ReaderSettings,
-  ReaderTheme,
-  ReaderTocEntry,
-} from '~/types/reader'
+import type { ReaderFont, ReaderMargin, ReaderSettings, ReaderTheme } from '~/types/reader'
 
 export const READER_THEMES: readonly ReaderTheme[] = ['auto', 'paper', 'sepia', 'dark', 'black']
 export const READER_FONTS: readonly ReaderFont[] = ['literata', 'atkinson', 'publisher']
@@ -132,18 +126,4 @@ export function tapZone(x: number, y: number): TapZone {
 export function readerTapAction(x: number, y: number): ReaderAction {
   const zone = tapZone(x, y)
   return zone === 'menu' ? 'toggle' : zone
-}
-
-interface TocNode {
-  label?: string
-  href?: string
-  subitems?: TocNode[]
-}
-
-/** Aplatit le sommaire foliate (arborescent) pour l'afficher en liste indentée. */
-export function flattenToc(items: readonly TocNode[] | undefined, depth = 0): ReaderTocEntry[] {
-  return (items ?? []).flatMap((item) => [
-    ...(item.href ? [{ label: item.label?.trim() || item.href, href: item.href, depth }] : []),
-    ...flattenToc(item.subitems, depth + 1),
-  ])
 }
