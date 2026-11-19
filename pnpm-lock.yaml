@@ -183,6 +183,9 @@ importers:
       '@iconify-json/lucide':
         specifier: ^1.2.156
         version: 1.2.156
+      '@journeyapps/wa-sqlite':
+        specifier: ^2.0.10
+        version: 2.0.10
       '@nuxt/fonts':
         specifier: ^1.2.0
         version: 1.2.0(@devframes/agentic@1.3.5)(@nuxt/schema@4.6.4)(cac@7.1.0)(confbox@0.2.4)(db0@0.3.4)(dotenv@17.4.2)(esbuild@0.28.2)(giget@3.3.1)(ioredis@5.11.1(supports-color@10.2.2))(jiti@2.7.0)(lightningcss@1.33.0)(magic-string@1.4.5)(mlly@1.8.2)(oxc-parser@0.141.0)(postcss@8.5.33)(rolldown@1.2.19)(rollup@4.68.5)(srvx@1.0.8)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
@@ -204,6 +207,9 @@ importers:
       tailwindcss:
         specifier: ^4.3.5
         version: 4.3.5
+      torgas-wasm:
+        specifier: link:../crates/torgas-wasm/pkg
+        version: link:../crates/torgas-wasm/pkg
       vue:
         specifier: ^3.5.45
         version: 3.5.45(typescript@6.0.3)
@@ -1149,6 +1155,9 @@ packages:
 
   '@isaacs/nonrecursive-glob-match@1.1.0':
     resolution: {integrity: sha512-GPm/Dbvk5RLmhRnxXIa7nTpK0xtl4E0wj0MslsuNiJ1FIROU+2+9lgUC/dgF7Ey4QCWhfEsgxilMRMCdHPfDfw==}
+
+  '@journeyapps/wa-sqlite@2.0.10':
+    resolution: {integrity: sha512-6Wo5ZijOc4/6M9u+MDsJdW8zDCdrct/p+7LcG7S7CT5YKu42j6lshMfUvgtGYMaZeuH7rpQHULZupPTQFqbS0w==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -6712,6 +6721,8 @@ snapshots:
       minipass: 7.1.3
 
   '@isaacs/nonrecursive-glob-match@1.1.0': {}
+
+  '@journeyapps/wa-sqlite@2.0.10': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
