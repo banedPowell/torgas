@@ -53,10 +53,31 @@ const items = computed<NavigationMenuItem[]>(() => [
     </UDashboardSidebar>
 
     <div class="flex min-w-0 flex-1 flex-col">
-      <slot />
+      <!-- La barre Reprendre flotte au-dessus du contenu : elle ne lui prend pas de place.
+           --resume-space réserve de quoi faire défiler la fin des listes sous elle. -->
+      <div
+        class="relative flex min-h-0 flex-1 flex-col"
+        :style="resume ? { '--resume-space': '5.5rem' } : undefined"
+      >
+        <slot />
 
-      <div v-if="resume" class="shrink-0 px-2 pb-2 lg:px-6 lg:pb-4">
-        <ResumeBar :work="resume" class="lg:mx-auto lg:max-w-xl" @dismiss="dismissResume" />
+        <Transition
+          enter-active-class="transition duration-200 ease-out"
+          leave-active-class="transition duration-150 ease-in"
+          enter-from-class="translate-y-2 opacity-0"
+          leave-to-class="translate-y-2 opacity-0"
+        >
+          <div
+            v-if="resume"
+            class="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-2 pb-2 lg:px-6 lg:pb-4"
+          >
+            <ResumeBar
+              :work="resume"
+              class="pointer-events-auto shadow-lg lg:mx-auto lg:max-w-xl"
+              @dismiss="dismissResume"
+            />
+          </div>
+        </Transition>
       </div>
 
       <nav
