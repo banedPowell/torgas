@@ -46,3 +46,22 @@ test.describe('EPUB : sommaire fait de notes seulement (#40)', () => {
     }).toPass({ timeout: 15_000 })
   })
 })
+
+test.describe('Fiche : liste des chapitres (#43)', () => {
+  test('liste les chapitres et en ouvre un dans le lecteur', async ({ page }) => {
+    await openLibrary(page)
+    await importFile(page, makeNotesOnlyEpub())
+    await workCard(page, NOTES_EPUB_TITLE).click()
+
+    const chapters = page.getByRole('list', { name: 'Chapitres' })
+    await expect(page.getByRole('heading', { name: /^Chapitres · \d+$/ })).toBeVisible()
+    await expect(chapters.getByRole('link', { name: /^\d+\sII$/ })).toBeVisible()
+    await expect(chapters.getByRole('link', { name: /\[1\]/ })).toHaveCount(0)
+
+    await chapters.getByRole('link', { name: /^\d+\sII$/ }).click()
+    await expect(page).toHaveURL(/\/read\//)
+    await expect
+      .poll(() => bookFrame(page)?.getByText('II', { exact: true }).isVisible())
+      .toBe(true)
+  })
+})

@@ -5,9 +5,14 @@ import type { FoliateRelocateDetail, View } from '~/vendor/foliate-js/view.js'
 // Fonctions de `utils/` (buildBookCss, readerKeyAction…) : auto-importées par Nuxt.
 import type { ReaderAction } from '~/utils/reader'
 
-const props = defineProps<{ workId: string }>()
+const props = defineProps<{
+  workId: string
+  /** Cible où ouvrir le livre (chapitre choisi sur la fiche) au lieu de la dernière position. */
+  startAt?: string
+}>()
 const emit = defineEmits<{ close: [] }>()
 
+const router = useRouter()
 const reader = useReader(() => props.workId)
 const { settings, resolvedTheme, update, reset } = useReaderSettings()
 const chrome = useReaderChrome()
@@ -58,7 +63,14 @@ watch([() => reader.state.value, container], async ([state, el]) => {
     view.value = el
     void toc.load(el.book)
     applyStyles()
-    await el.init({ lastLocation: reader.initialCfi.value }).catch(() => el.init({}))
+    if (props.startAt) {
+      await el.init({})
+      await el.goTo(props.startAt).catch(() => undefined)
+      // La cible ne sert qu'à l'ouverture : un rechargement reprend à la position enregistrée.
+      void router.replace({ query: {} })
+    } else {
+      await el.init({ lastLocation: reader.initialCfi.value }).catch(() => el.init({}))
+    }
   } catch (e) {
     reader.fail(e)
   } finally {
