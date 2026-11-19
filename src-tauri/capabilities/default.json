@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capacités minimales de la fenêtre principale : événements (dépôt de fichiers), webview et fenêtre. Ni shell, ni accès libre au système de fichiers.",
+  "windows": ["main"],
+  "permissions": ["core:event:default", "core:webview:default", "core:window:default"]
+}

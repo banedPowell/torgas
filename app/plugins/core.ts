@@ -8,7 +8,7 @@ function unavailable(cause: unknown): CoreBridge {
 
 /**
  * Fournit le cœur à l'app : `WebBridge` (wasm + OPFS + wa-sqlite) dans le navigateur ;
- * `MemoryBridge` en test seulement.
+ * `TauriBridge` (invoke + torgas://) dans la coquille desktop ; `MemoryBridge` en test seulement.
  */
 export default defineNuxtPlugin({
   name: 'torgas-core',
@@ -18,11 +18,10 @@ export default defineNuxtPlugin({
       const { MemoryBridge } = await import('~/services/core/memory')
       core = new MemoryBridge()
     } else {
-      if ('__TAURI_INTERNALS__' in window) {
-        // TODO(#10) : `TauriBridge` (invoke + protocole torgas://) ; d'ici là, le web sert aussi.
-      }
-      const { WebBridge } = await import('~/services/core/web')
-      core = new WebBridge()
+      core =
+        '__TAURI_INTERNALS__' in window
+          ? new (await import('~/services/core/tauri')).TauriBridge()
+          : new (await import('~/services/core/web')).WebBridge()
     }
     try {
       await core.init()

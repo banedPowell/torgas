@@ -29,7 +29,13 @@ pnpm build:wasm   # construit crates/torgas-wasm/pkg, dépendance de l'app (avan
 pnpm install
 pnpm dev          # reconstruit le wasm, puis app web sur http://localhost:3000
 pnpm tauri dev    # app desktop
+pnpm tauri build  # paquet desktop (macOS : --bundles app ou dmg)
 cargo test        # tests du cœur Rust
 ```
+
+Desktop : les livres sont copiés dans `~/Torgas/` (un dossier par série ou auteur), la base et les
+couvertures dans le dossier de données de l'app. Pour essayer sans toucher à ces dossiers :
+`TORGAS_LIBRARY_DIR=/tmp/lib TORGAS_DATA_DIR=/tmp/data pnpm tauri dev`. Voir
+[l'ADR 0005](docs/adr/0005-tauri-desktop.md).
 
 Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour la façon de travailler.

@@ -4,11 +4,12 @@
  * quand on survole la fenêtre avec des fichiers, plus un sélecteur caché ouvert par `open()`.
  * Variante `inline` : zone de dépôt cliquable (`UFileUpload`), comme dans le panneau d'import.
  * Les fichiers refusés par `accept` sont transmis quand même : le cœur les signale.
+ * `hovering` affiche aussi la zone (desktop : le dépôt natif de Tauri masque les événements HTML5).
  */
-const props = withDefaults(defineProps<{ variant?: 'overlay' | 'inline'; disabled?: boolean }>(), {
-  variant: 'overlay',
-  disabled: false,
-})
+const props = withDefaults(
+  defineProps<{ variant?: 'overlay' | 'inline'; disabled?: boolean; hovering?: boolean }>(),
+  { variant: 'overlay', disabled: false, hovering: false },
+)
 const emit = defineEmits<{ files: [files: File[]] }>()
 
 const ACCEPT = '.epub,.cbz,application/epub+zip'
@@ -102,7 +103,7 @@ defineExpose({ open: () => input.value?.click() })
         leave-to-class="opacity-0"
       >
         <div
-          v-if="dragging"
+          v-if="dragging || (hovering && !disabled)"
           class="fixed inset-0 z-50 flex items-center justify-center bg-default/90 p-4 sm:p-8"
           aria-hidden="true"
         >
