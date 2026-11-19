@@ -1,4 +1,4 @@
-import type { Request, Response, Row, SqlValue, Statement } from './protocol'
+import type { Migration, Request, Response, Row, SqlValue, Statement } from './protocol'
 
 /**
  * Client du worker SQLite : chaque appel devient un message numéroté, la réponse résout la
@@ -40,8 +40,8 @@ export class DbClient {
     })
   }
 
-  async init(schemaSql: string, schemaVersion: number): Promise<void> {
-    await this.call({ op: 'init', schemaSql, schemaVersion })
+  async init(schemaSql: string, schemaVersion: number, migrations: Migration[]): Promise<void> {
+    await this.call({ op: 'init', schemaSql, schemaVersion, migrations })
   }
 
   query(sql: string, params?: SqlValue[]): Promise<Row[]> {

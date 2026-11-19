@@ -98,6 +98,22 @@ export function useLibrary() {
     writeDismissed(dismissedResume.value)
   }
 
+  /**
+   * Retire des œuvres supprimées de l'état chargé, sans relire le cœur ; les séries sans
+   * volume disparaissent avec elles. La barre « Reprendre » en dépend et suit d'elle-même.
+   * Pendant un chargement (résultat peut-être antérieur à la suppression), on recharge.
+   */
+  function forget(ids: readonly string[]) {
+    if (state.value === 'loading') {
+      void load()
+      return
+    }
+    const gone = new Set(ids)
+    works.value = works.value.filter((w) => !gone.has(w.id))
+    const used = new Set(works.value.map((w) => w.seriesId))
+    series.value = series.value.filter((s) => used.has(s.id))
+  }
+
   function setQuery(query: string) {
     filters.value = { ...filters.value, query }
   }
@@ -134,6 +150,7 @@ export function useLibrary() {
     load,
     ensureLoaded,
     dismissResume,
+    forget,
     setQuery,
     setFormat,
     setStatus,

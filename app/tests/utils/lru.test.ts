@@ -44,6 +44,17 @@ describe('LruCache', () => {
     expect(lru.get('a')).toBeUndefined()
   })
 
+  it('supprime et libère les entrées choisies par leur clé', () => {
+    const { lru, evicted } = cache(4)
+    lru.set('w1:0', 'a')
+    lru.set('w2:0', 'b')
+    lru.set('w1:1', 'c')
+    expect(lru.deleteWhere((key) => key.startsWith('w1:'))).toBe(2)
+    expect(evicted).toEqual(['w1:0=a', 'w1:1=c'])
+    expect(lru.has('w2:0')).toBe(true)
+    expect(lru.deleteWhere(() => false)).toBe(0)
+  })
+
   it('refuse une capacité invalide', () => {
     expect(() => new LruCache(0)).toThrow(RangeError)
     expect(() => new LruCache(1.5)).toThrow(RangeError)

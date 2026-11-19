@@ -89,6 +89,11 @@ describe('TauriBridge', () => {
       { sessionId: 'x', minutes: 3, progress: 0.5 },
       undefined,
     )
+    await bridge.deleteWorks(['w1', 'w2'])
+    expect(invoke).toHaveBeenLastCalledWith('delete_works', { ids: ['w1', 'w2'] }, undefined)
+    invoke.mockClear()
+    await bridge.deleteWorks([])
+    expect(invoke).not.toHaveBeenCalled()
     invoke.mockResolvedValue(new Uint8Array([9, 8]).buffer)
     expect(await bridge.getBookBytes('w1')).toEqual(new Uint8Array([9, 8]))
   })

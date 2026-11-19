@@ -54,3 +54,17 @@ const authorsFormat = new Intl.ListFormat('fr', { style: 'long', type: 'conjunct
 export function formatAuthors(authors: readonly string[]): string {
   return authorsFormat.format(authors.map((a) => a.trim()).filter(Boolean))
 }
+
+/**
+ * Titres joints en une phrase : « A, B et C ». Au-delà de `max` (et s'il en reste plus d'un),
+ * les suivants sont résumés par `others(n)` : « A, B, C et 4 autres ».
+ */
+export function formatTitleList(
+  titles: readonly string[],
+  others: (count: number) => string,
+  max = 3,
+): string {
+  const rest = titles.length - max
+  const shown = rest > 1 ? [...titles.slice(0, max), others(rest)] : [...titles]
+  return authorsFormat.format(shown)
+}

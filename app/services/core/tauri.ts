@@ -120,6 +120,10 @@ export class TauriBridge implements CoreBridge {
     return this.ordered('set_series_direction', { seriesId, direction })
   }
 
+  async deleteWorks(ids: string[]): Promise<void> {
+    if (ids.length) await this.ordered('delete_works', { ids })
+  }
+
   async getBookBytes(id: string): Promise<Uint8Array> {
     return toBytes(await call<ArrayBuffer>('get_book_bytes', { id }))
   }

@@ -40,7 +40,25 @@ export const INSERT_FILE = `INSERT INTO file (id, work_id, format, sha256, size_
 export const INSERT_ENTRY = `INSERT INTO library_entry (work_id, status, progress, added_at)
   VALUES (?1, 'to_read', 0, ?2)`
 
-export const SET_STATUS = `UPDATE library_entry SET
+/** Liste d'identifiants passée en un seul paramètre, tableau JSON (`["a","b"]`). */
+const IDS_PARAM = '(SELECT value FROM json_each(?1))'
+
+/** Fichiers (livre, couverture) des œuvres à supprimer. */
+export const DELETED_FILES = `SELECT f.work_id, f.path, w.cover_url FROM file f
+  JOIN work w ON w.id = f.work_id
+  WHERE f.work_id IN ${IDS_PARAM}`
+
+/**
+ * Supprime les œuvres : fichier, entrée, position et marque-pages suivent (`ON DELETE CASCADE`),
+ * les sessions de lecture restent, détachées (`ON DELETE SET NULL`).
+ */
+export const DELETE_WORKS = `DELETE FROM work WHERE id IN ${IDS_PARAM}`
+
+/** Séries restées sans volume (une série n'existe que par ses volumes). */
+export const DELETE_EMPTY_SERIES = `DELETE FROM series
+  WHERE NOT EXISTS (SELECT 1 FROM work WHERE work.series_id = series.id)`
+
+export const SET_STATUS =`UPDATE library_entry SET
     status = ?2,
     started_at = CASE WHEN ?2 = 'reading' THEN COALESCE(started_at, ?3) ELSE started_at END,
     finished_at = CASE WHEN ?2 = 'finished' THEN ?3 ELSE finished_at END
