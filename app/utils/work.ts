@@ -1,7 +1,15 @@
 import type { ReadingStatus, Series, Work } from '~/types/core'
-import type { ReadAction, SeriesSummary, VolumeRow, WorkMeta, WorkTarget } from '~/types/work'
+import type {
+  ReadAction,
+  SeriesSummary,
+  SeriesView,
+  VolumeRow,
+  WorkMeta,
+  WorkTarget,
+} from '~/types/work'
 import { clampProgress } from './format'
-import { naturalCompare } from './sort'
+import { isChapter, sortChapters, splitSeriesWorks } from './seriesChapters'
+import { compareRecentFirst, naturalCompare } from './sort'
 
 /** Volumes triés par numéro, puis par titre (les volumes sans numéro à la fin). */
 export function sortVolumes(works: readonly Work[]): Work[] {
@@ -12,8 +20,9 @@ export function sortVolumes(works: readonly Work[]): Work[] {
 }
 
 function seriesTarget(series: Series, works: readonly Work[]): WorkTarget | null {
-  const volumes = sortVolumes(works.filter((w) => w.seriesId === series.id))
-  return volumes.length > 0 ? { kind: 'series', series, volumes } : null
+  const { volumes, chapters } = splitSeriesWorks(works.filter((w) => w.seriesId === series.id))
+  const sorted = [...sortVolumes(volumes), ...sortChapters(chapters)]
+  return sorted.length > 0 ? { kind: 'series', series, works: sorted } : null
 }
 
 /**
@@ -50,14 +59,32 @@ export function nextVolume(volumes: readonly Work[]): Work | undefined {
   return sortVolumes(volumes).find((v) => v.status !== 'finished')
 }
 
-export function summarizeSeries(volumes: readonly Work[]): SeriesSummary {
+export function summarizeSeries(
+  volumes: readonly Work[],
+  unit: SeriesView = 'volumes',
+): SeriesSummary {
   const total = volumes.length
   const sum = volumes.reduce((acc, v) => acc + clampProgress(v.progress), 0)
   return {
+    unit,
     total,
     finished: volumes.filter((v) => v.status === 'finished').length,
     progress: total === 0 ? 0 : sum / total,
   }
+}
+
+/**
+ * Vue ouverte par défaut sur la fiche d'une série : les chapitres si elle n'a qu'eux ou si tous
+ * ses volumes sont lus (on suit alors la parution en chapitres) ; sinon la vue de la dernière
+ * œuvre lue, et les volumes si rien n'a encore été lu.
+ */
+export function defaultSeriesView(volumes: readonly Work[], chapters: readonly Work[]): SeriesView {
+  if (chapters.length === 0) return 'volumes'
+  if (volumes.every((v) => v.status === 'finished')) return 'chapters'
+  const lastRead = [...volumes, ...chapters]
+    .filter((w) => w.lastReadAt)
+    .sort((a, b) => compareRecentFirst(a.lastReadAt, b.lastReadAt))[0]
+  return lastRead && isChapter(lastRead) ? 'chapters' : 'volumes'
 }
 
 /** Statut d'une série, déduit de ses volumes (le cœur ne stocke un statut que par œuvre). */
@@ -138,20 +165,23 @@ export function describeTarget(target: WorkTarget): WorkMeta {
       addedAt: w.addedAt,
       isSeries: false,
       volumeCount: 1,
+      chapterCount: 0,
     }
   }
-  const { series, volumes } = target
-  const first = volumes[0]!
+  const { series, works } = target
+  const first = works[0]!
+  const chapterCount = works.filter(isChapter).length
   return {
     title: series.title,
-    authors: [...new Set(volumes.flatMap((v) => v.authors))],
-    coverUrl: volumes.find((v) => v.coverUrl)?.coverUrl,
+    authors: [...new Set(works.flatMap((v) => v.authors))],
+    coverUrl: works.find((v) => v.coverUrl)?.coverUrl,
     format: first.format,
     kind: first.kind,
-    language: volumes.find((v) => v.language)?.language,
-    sizeBytes: volumes.reduce((sum, v) => sum + v.sizeBytes, 0),
-    addedAt: volumes.map((v) => v.addedAt).reduce((min, d) => (d < min ? d : min)),
+    language: works.find((v) => v.language)?.language,
+    sizeBytes: works.reduce((sum, v) => sum + v.sizeBytes, 0),
+    addedAt: works.map((v) => v.addedAt).reduce((min, d) => (d < min ? d : min)),
     isSeries: true,
-    volumeCount: volumes.length,
+    volumeCount: works.length - chapterCount,
+    chapterCount,
   }
 }

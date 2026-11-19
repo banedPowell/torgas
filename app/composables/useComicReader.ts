@@ -6,7 +6,7 @@ import {
   comicPreloadPages,
   comicProgress,
   comicStepForSide,
-  findNextComicVolume,
+  findNextComic,
   isComicPageKept,
   resolveComicLayout,
   spreadDisplayOrder,
@@ -42,7 +42,8 @@ export function useComicReader(work: MaybeRefOrGetter<Work>, options: ComicReade
   const error = ref<string | null>(null)
   const pageCount = ref(0)
   const series = shallowRef<Series | null>(null)
-  const nextVolume = shallowRef<Work | null>(null)
+  /** Suite de la série : volume suivant, ou chapitre suivant si l'œuvre est un chapitre. */
+  const nextWork = shallowRef<Work | null>(null)
   const localDirection = ref<ReadingDirection>('ltr')
   const anchor = ref(0)
   const ended = ref(false)
@@ -193,7 +194,7 @@ export function useComicReader(work: MaybeRefOrGetter<Work>, options: ComicReade
       if (count <= 0) throw new Error('empty')
       pageCount.value = count
       series.value = allSeries.find((s) => s.id === current.seriesId) ?? null
-      nextVolume.value = findNextComicVolume(works, current) ?? null
+      nextWork.value = findNextComic(works, current) ?? null
       const stored = locator?.format === 'cbz' ? locator : null
       const last = await saver.restore(stored, fresh?.lastReadAt)
       const resume = last ? (last.page ?? comicPageFromProgress(last.progress, count)) : 0
@@ -239,7 +240,7 @@ export function useComicReader(work: MaybeRefOrGetter<Work>, options: ComicReade
     layout,
     direction,
     series: computed(() => series.value),
-    nextVolume: computed(() => nextVolume.value),
+    nextWork: computed(() => nextWork.value),
     ended: readonly(ended),
     progress,
     isFirst,

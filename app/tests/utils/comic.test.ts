@@ -9,6 +9,7 @@ import {
   comicStepForSide,
   comicTapAction,
   comicThumbnailWindow,
+  findNextComic,
   findNextComicVolume,
   isComicPageKept,
   resolveComicLayout,
@@ -143,6 +144,31 @@ describe('findNextComicVolume', () => {
   it('ne trouve rien en fin de série ou hors série', () => {
     expect(findNextComicVolume(works, works[1]!)).toBeUndefined()
     expect(findNextComicVolume(works, makeWork({ id: 'seul', title: 'Seul' }))).toBeUndefined()
+  })
+})
+
+describe('findNextComic', () => {
+  const chapter = (n: number, extra: Partial<Work> = {}) =>
+    makeWork({ id: `c${n}`, title: `Ch. ${n}`, seriesId: 's', chapter: n, ...extra })
+  const works: Work[] = [
+    makeWork({ id: 'v1', title: 'Vol. 1', seriesId: 's', volume: 1 }),
+    chapter(1051),
+    chapter(1050.5, { volume: 105 }),
+    chapter(1050, { volume: 105 }),
+    chapter(1053),
+    chapter(2, { volume: 2 }),
+    makeWork({ id: 'x', title: 'Autre', seriesId: 'autre', chapter: 1050.2 }),
+  ]
+
+  it('enchaîne le chapitre suivant, décimaux et trous compris', () => {
+    expect(findNextComic(works, chapter(1050))?.id).toBe('c1050.5')
+    expect(findNextComic(works, chapter(1050.5))?.id).toBe('c1051')
+    expect(findNextComic(works, chapter(1051))?.id).toBe('c1053')
+    expect(findNextComic(works, chapter(1053))).toBeUndefined()
+  })
+
+  it('ne prend pas un chapitre pour le volume suivant', () => {
+    expect(findNextComic(works, works[0]!)).toBeUndefined()
   })
 })
 

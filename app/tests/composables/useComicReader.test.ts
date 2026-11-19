@@ -51,7 +51,7 @@ describe('useComicReader', () => {
     expect(reader.page.value).toBe(0)
     expect(reader.layout.value).toBe('single')
     expect(reader.direction.value).toBe('rtl')
-    expect(reader.nextVolume.value?.id).toBe(volume2.id)
+    expect(reader.nextWork.value?.id).toBe(volume2.id)
     expect(reader.isFirst.value).toBe(true)
   })
 
@@ -146,7 +146,7 @@ describe('useComicReader', () => {
 
   it('n’a pas de volume suivant en fin de série', async () => {
     const { reader } = await open(volume2)
-    expect(reader.nextVolume.value).toBeNull()
+    expect(reader.nextWork.value).toBeNull()
   })
 
   it('précharge les 3 pages suivantes', async () => {

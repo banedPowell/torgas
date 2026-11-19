@@ -86,7 +86,7 @@ pub struct Library {
 const WORK_SELECT: &str = "
     SELECT w.id, w.title, w.authors, w.kind, w.language, w.cover_url, w.series_id, w.volume,
            f.format, f.sha256, f.size_bytes, w.page_count,
-           le.added_at, le.status, le.progress, le.last_read_at
+           le.added_at, le.status, le.progress, le.last_read_at, w.chapter, w.chapter_title
     FROM work w
     JOIN library_entry le ON le.work_id = w.id
     JOIN file f ON f.id = (
@@ -170,8 +170,8 @@ impl Library {
         };
         tx.execute(
             "INSERT INTO work (id, title, authors, kind, language, cover_url, series_id, volume,
-                               page_count, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                               page_count, created_at, chapter, chapter_title)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 work_id,
                 analysis.title,
@@ -183,6 +183,8 @@ impl Library {
                 analysis.volume,
                 analysis.page_count,
                 now,
+                analysis.chapter,
+                analysis.chapter_title,
             ],
         )?;
         tx.execute(
@@ -313,12 +315,14 @@ impl Library {
             .optional()?)
     }
 
-    /// Volumes d'une série, par numéro croissant (sans numéro en dernier).
+    /// Volumes et chapitres d'une série, par volume puis chapitre croissants (sans numéro en
+    /// dernier).
     pub fn series_works(&self, series_id: &str) -> Result<Vec<Work>> {
         self.query_works(
             &format!(
                 "{WORK_SELECT} WHERE w.series_id = ?1
-                 ORDER BY w.volume IS NULL, w.volume, w.title COLLATE NOCASE"
+                 ORDER BY w.volume IS NULL, w.volume, w.chapter IS NOT NULL, w.chapter,
+                          w.title COLLATE NOCASE"
             ),
             [series_id],
         )
@@ -594,6 +598,8 @@ fn work_from_row(row: &Row<'_>) -> rusqlite::Result<Work> {
         cover_url: row.get(5)?,
         series_id: row.get(6)?,
         volume: row.get(7)?,
+        chapter: row.get(16)?,
+        chapter_title: row.get(17)?,
         format: parse_col(row, 8)?,
         sha256: row.get(9)?,
         size_bytes: u64::try_from(size).map_err(|err| conversion_error(10, err))?,
@@ -992,36 +998,130 @@ mod tests {
         assert_eq!(lib.list_works().unwrap(), [b]);
     }
 
+    /// Schéma en version 2 (avant les chapitres), tiré du schéma courant.
+    fn schema_v2() -> String {
+        let mut sql = SCHEMA_SQL.to_owned();
+        let start = sql.find(",\n    -- Œuvre qui est un chapitre").unwrap();
+        let end = sql.find("chapter_title TEXT\n").unwrap() + "chapter_title TEXT".len();
+        sql.replace_range(start..end, "");
+        let sql = sql
+            .replace(
+                "CREATE INDEX IF NOT EXISTS work_series_chapter_idx ON work (series_id, chapter);\n",
+                "",
+            )
+            .replace("PRAGMA user_version = 3;", "PRAGMA user_version = 2;");
+        assert!(!sql.contains("chapter"));
+        sql
+    }
+
+    /// Base créée avec un ancien schéma ; une œuvre (volume 3 de « Saga ») y est insérée
+    /// avec les colonnes de l'époque. Renvoie la connexion et l'identifiant de l'œuvre.
+    fn legacy_library(schema: &str) -> (Connection, String) {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", true).unwrap();
+        conn.execute_batch(schema).unwrap();
+        let at = "2026-01-01T00:00:00.000Z";
+        conn.execute_batch(&format!(
+            "INSERT INTO series (id, title, direction, created_at) VALUES ('s', 'Saga', 'ltr', '{at}');
+             INSERT INTO work (id, title, authors, kind, series_id, volume, page_count, created_at)
+               VALUES ('w', 'Saga v03', '[]', 'comic', 's', 3, 12, '{at}');
+             INSERT INTO file (id, work_id, format, sha256, size_bytes, path, added_at)
+               VALUES ('f', 'w', 'cbz', '{}', 10, NULL, '{at}');
+             INSERT INTO library_entry (work_id, status, progress, added_at)
+               VALUES ('w', 'to_read', 0, '{at}');
+             INSERT INTO reading_session (id, work_id, started_at, minutes)
+               VALUES ('r', 'w', '{at}', 0);",
+            "0".repeat(64)
+        ))
+        .unwrap();
+        (conn, "w".to_owned())
+    }
+
+    fn user_version(lib: &Library) -> u32 {
+        lib.connection()
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .unwrap()
+    }
+
     #[test]
     fn migrates_v1_keeping_reading_sessions() {
         // Base en version 1 : `reading_session.work_id` en `NOT NULL … ON DELETE CASCADE`.
         let v2_fk = "work_id         TEXT REFERENCES work (id) ON DELETE SET NULL,";
-        assert_eq!(SCHEMA_SQL.matches(v2_fk).count(), 1);
-        let v1_sql = SCHEMA_SQL
+        let v2 = schema_v2();
+        assert_eq!(v2.matches(v2_fk).count(), 1);
+        let v1_sql = v2
             .replace(
                 v2_fk,
                 "work_id         TEXT NOT NULL REFERENCES work (id) ON DELETE CASCADE,",
             )
             .replace("PRAGMA user_version = 2;", "PRAGMA user_version = 1;");
-        let conn = Connection::open_in_memory().unwrap();
-        conn.pragma_update(None, "foreign_keys", true).unwrap();
-        conn.execute_batch(&v1_sql).unwrap();
-        let mut lib = Library { conn };
-        let work = import(&mut lib, "livre.epub", &fixtures::epub_minimal());
-        let session = lib.start_session(&work.id).unwrap();
+        let (conn, work_id) = legacy_library(&v1_sql);
 
-        let mut lib = Library::from_connection(lib.conn).unwrap();
-        let version: u32 = lib
-            .connection()
-            .pragma_query_value(None, "user_version", |row| row.get(0))
-            .unwrap();
-        assert_eq!(version, SCHEMA_VERSION);
-        assert_eq!(lib.list_sessions(&work.id).unwrap().len(), 1);
+        let mut lib = Library::from_connection(conn).unwrap();
+        assert_eq!(user_version(&lib), SCHEMA_VERSION);
+        assert_eq!(lib.list_sessions(&work_id).unwrap().len(), 1);
 
-        lib.delete_works(&[&work.id]).unwrap();
+        lib.delete_works(&[&work_id]).unwrap();
         assert_eq!(count(&lib, "reading_session"), 1);
-        let ended = lib.end_session(&session.id, 3.0, Some(0.1)).unwrap();
+        let ended = lib.end_session("r", 3.0, Some(0.1)).unwrap();
         assert_eq!(ended.work_id, None);
+    }
+
+    #[test]
+    fn migrates_v2_adding_chapters() {
+        let (conn, work_id) = legacy_library(&schema_v2());
+        let mut lib = Library::from_connection(conn).unwrap();
+        assert_eq!(user_version(&lib), SCHEMA_VERSION);
+
+        let volume = lib.get_work(&work_id).unwrap().unwrap();
+        assert_eq!(volume.volume, Some(3.0));
+        assert_eq!(volume.chapter, None);
+        assert_eq!(volume.chapter_title, None);
+
+        let chapter = import(
+            &mut lib,
+            "Saga v04 c031 - La suite.cbz",
+            &fixtures::cbz_p1_to_p12(),
+        );
+        assert_eq!(chapter.series_id.as_deref(), Some("s"));
+        assert_eq!(chapter.volume, Some(4.0));
+        assert_eq!(chapter.chapter, Some(31.0));
+        assert_eq!(chapter.chapter_title.as_deref(), Some("La suite"));
+        let index: i64 = lib
+            .connection()
+            .query_row(
+                "SELECT count(*) FROM sqlite_master WHERE name = 'work_series_chapter_idx'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(index, 1);
+    }
+
+    #[test]
+    fn series_lists_volumes_and_chapters() {
+        let mut lib = library();
+        let c2 = import(
+            &mut lib,
+            "Saga - Chapitre 2.cbz",
+            &fixtures::cbz_p1_to_p12(),
+        );
+        let v1 = import(&mut lib, "Saga v01.cbz", &fixtures::cbz_with_folders());
+        let c1 = import(
+            &mut lib,
+            "Saga #1.cbz",
+            &fixtures::cbz_with_comic_info("<ComicInfo><Title>Début</Title></ComicInfo>"),
+        );
+        assert_eq!(c1.chapter_title.as_deref(), Some("Début"));
+        assert_eq!(c1.series_id, v1.series_id);
+        assert_eq!(c2.series_id, v1.series_id);
+        let ids: Vec<_> = lib
+            .series_works(v1.series_id.as_deref().unwrap())
+            .unwrap()
+            .into_iter()
+            .map(|w| w.id)
+            .collect();
+        assert_eq!(ids, [v1.id, c1.id, c2.id]);
     }
 
     #[test]

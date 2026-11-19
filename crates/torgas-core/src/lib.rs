@@ -5,13 +5,15 @@
 //!
 //! - l'analyse des fichiers importés ([`analyze()`]) : format, empreinte, métadonnées ;
 //! - la lecture des archives CBZ ([`cbz`]) et des métadonnées EPUB ([`epub`]) ;
-//! - la déduction série/volume depuis un nom de fichier ([`naming`]) ;
+//! - la déduction série/volume/chapitre depuis un nom de fichier ([`naming`]) ou
+//!   `ComicInfo.xml` ([`comicinfo`]) ;
 //! - les miniatures de couverture ([`thumbnail`]) ;
 //! - le modèle partagé avec l'application ([`model`]) et le schéma SQL ([`schema`]) ;
 //! - derrière la feature `sqlite`, la bibliothèque SQLite native (`db`).
 
 pub mod analysis;
 pub mod cbz;
+pub mod comicinfo;
 pub mod epub;
 pub mod error;
 pub mod hash;

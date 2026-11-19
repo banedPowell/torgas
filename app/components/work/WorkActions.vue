@@ -7,6 +7,8 @@ const props = defineProps<{
   action: ReadAction
   /** Numéro du volume visé, pour une série. */
   volume?: number
+  /** Numéro du chapitre visé, pour une série de chapitres (prime sur `volume`). */
+  chapterNumber?: number
   /** Chapitre en cours (œuvre seule), pour « Reprendre à « … » ». */
   chapter?: string
 }>()
@@ -15,7 +17,12 @@ const { t } = useI18n()
 
 const label = computed(() => {
   const { kind, percent } = props.action
-  const params = { percent: formatPercent(percent / 100), volume: props.volume }
+  const params = {
+    percent: formatPercent(percent / 100),
+    volume: props.volume,
+    chapter: props.chapterNumber === undefined ? '' : formatIssueNumber(props.chapterNumber),
+  }
+  if (props.chapterNumber !== undefined) return t(`work.action.${kind}Issue`, params)
   if (kind === 'resume' && props.chapter && props.volume === undefined) {
     return t('work.action.resumeChapter', { chapter: props.chapter })
   }

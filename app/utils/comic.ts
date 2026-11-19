@@ -121,7 +121,31 @@ export function isComicPageKept(
 export function findNextComicVolume(works: readonly Work[], current: Work): Work | undefined {
   if (!current.seriesId || current.volume === undefined) return undefined
   const next = current.volume + 1
-  return works.find((w) => w.seriesId === current.seriesId && w.volume === next)
+  return works.find(
+    (w) => w.seriesId === current.seriesId && w.volume === next && w.chapter === undefined,
+  )
+}
+
+/**
+ * Chapitre suivant de la même série : le plus petit numéro au-delà du chapitre courant
+ * (1050 → 1050,5 → 1051), même s'il manque des chapitres entre les deux.
+ */
+export function findNextComicChapter(works: readonly Work[], current: Work): Work | undefined {
+  const number = current.chapter
+  if (!current.seriesId || number === undefined) return undefined
+  let next: Work | undefined
+  for (const w of works) {
+    if (w.seriesId !== current.seriesId || w.chapter === undefined || w.chapter <= number) continue
+    if (!next || w.chapter < next.chapter!) next = w
+  }
+  return next
+}
+
+/** Œuvre qui suit dans la série : chapitre suivant pour un chapitre, sinon volume suivant. */
+export function findNextComic(works: readonly Work[], current: Work): Work | undefined {
+  return current.chapter === undefined
+    ? findNextComicVolume(works, current)
+    : findNextComicChapter(works, current)
 }
 
 /** Fenêtre de miniatures centrée sur la page courante (7 par défaut, comme la maquette). */

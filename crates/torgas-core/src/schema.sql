@@ -1,4 +1,4 @@
--- Schéma de la bibliothèque Torgas (version 2), appliqué tel quel à une base neuve.
+-- Schéma de la bibliothèque Torgas (version 3), appliqué tel quel à une base neuve.
 -- Une base plus ancienne passe par les migrations de `migrations/` (voir `schema.rs`).
 -- Partagé entre le desktop (rusqlite) et le web (wa-sqlite).
 -- Identifiants : UUID v7 en TEXT. Dates : TEXT ISO 8601 UTC.
@@ -24,9 +24,14 @@ CREATE TABLE IF NOT EXISTS work (
     series_id   TEXT REFERENCES series (id) ON DELETE SET NULL,
     volume      REAL CHECK (volume IS NULL OR volume >= 0),
     page_count  INTEGER CHECK (page_count IS NULL OR page_count >= 0),
-    created_at  TEXT NOT NULL
+    created_at  TEXT NOT NULL,
+    -- Œuvre qui est un chapitre : son numéro (1050.5 possible) et son titre éventuel ;
+    -- `volume` est alors le volume qui le contient, s'il est connu. (Ajoutées en version 3.)
+    chapter       REAL CHECK (chapter IS NULL OR chapter >= 0),
+    chapter_title TEXT
 );
 CREATE INDEX IF NOT EXISTS work_series_idx ON work (series_id, volume);
+CREATE INDEX IF NOT EXISTS work_series_chapter_idx ON work (series_id, chapter);
 CREATE INDEX IF NOT EXISTS work_title_idx ON work (title COLLATE NOCASE);
 
 CREATE TABLE IF NOT EXISTS file (
@@ -90,4 +95,4 @@ CREATE TABLE IF NOT EXISTS reading_session (
 );
 CREATE INDEX IF NOT EXISTS reading_session_work_idx ON reading_session (work_id, started_at);
 
-PRAGMA user_version = 2;
+PRAGMA user_version = 3;

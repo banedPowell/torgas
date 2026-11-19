@@ -140,9 +140,15 @@ pub struct Work {
     /// Série à laquelle appartient l'œuvre.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub series_id: Option<String>,
-    /// Numéro de volume dans la série.
+    /// Numéro de volume dans la série (pour un chapitre : le volume qui le contient, s'il est connu).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub volume: Option<f64>,
+    /// Numéro de chapitre : présent si l'œuvre est un chapitre et non un volume entier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chapter: Option<f64>,
+    /// Titre du chapitre, s'il est connu.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chapter_title: Option<String>,
     /// Format du fichier.
     pub format: Format,
     /// Empreinte SHA-256 du fichier (hexadécimal).
@@ -289,6 +295,8 @@ mod tests {
             cover_url: None,
             series_id: Some("s".into()),
             volume: Some(3.0),
+            chapter: Some(12.5),
+            chapter_title: None,
             format: Format::Cbz,
             sha256: "00".into(),
             size_bytes: 10,
@@ -302,6 +310,8 @@ mod tests {
         assert_eq!(value["seriesId"], "s");
         assert_eq!(value["sizeBytes"], 10);
         assert_eq!(value["pageCount"], 12);
+        assert_eq!(value["chapter"], 12.5);
+        assert!(value.get("chapterTitle").is_none());
         assert_eq!(value["status"], "to_read");
         assert!(value.get("coverUrl").is_none());
     }

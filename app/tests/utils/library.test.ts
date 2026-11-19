@@ -7,10 +7,11 @@ import {
   groupBySeries,
   matchesFilters,
   pickResume,
+  seriesCounts,
   summarizeEntry,
   visibleResume,
 } from '~/utils/library'
-import { nemo, sampleSeries, sampleWorks } from '../fixtures'
+import { makeWork, nemo, sampleSeries, sampleWorks } from '../fixtures'
 
 const noFilter: LibraryFilters = { query: '', format: 'all', status: 'all' }
 
@@ -83,6 +84,38 @@ describe('library utils', () => {
       volumesTotal: 2,
       volumesFinished: 1,
     })
+    expect(seriesCounts(summarizeEntry(series))).toEqual([{ key: 'volumes', read: 1, total: 2 }])
+  })
+
+  it('compte chapitres et volumes d’une série', () => {
+    const chapters = [1, 2, 3].map((n) =>
+      makeWork({
+        id: `ch-${n}`,
+        title: `Nemo c${n}`,
+        format: 'cbz',
+        seriesId: nemo.id,
+        chapter: n,
+        status: n === 1 ? 'finished' : 'to_read',
+      }),
+    )
+    const [entry] = groupBySeries([...sampleWorks, ...chapters], sampleSeries).filter(
+      (e) => e.kind === 'series',
+    )
+    const summary = summarizeEntry(entry!)
+    expect(summary).toMatchObject({ volumesTotal: 2, chaptersTotal: 3, chaptersFinished: 1 })
+    expect(seriesCounts(summary)).toEqual([
+      { key: 'volumes', read: 1, total: 2 },
+      { key: 'chapters', read: 1, total: 3 },
+    ])
+    const onlyChapters = groupBySeries(chapters, sampleSeries)[0]!
+    expect(onlyChapters.kind === 'series' && onlyChapters.works.map((w) => w.id)).toEqual([
+      'ch-1',
+      'ch-2',
+      'ch-3',
+    ])
+    expect(seriesCounts(summarizeEntry(onlyChapters))).toEqual([
+      { key: 'chapters', read: 1, total: 3 },
+    ])
   })
 
   it("masque la reprise fermée tant qu'elle n'a pas été relue", () => {

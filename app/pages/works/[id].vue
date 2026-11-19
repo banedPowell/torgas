@@ -18,6 +18,11 @@ const {
   rows,
   next,
   missing,
+  volumes,
+  chapters,
+  view,
+  hasBothViews,
+  nextChapter,
   load,
   setStatus,
   setDirection,
@@ -30,7 +35,9 @@ useHead({
   title: () => (meta.value ? `${meta.value.title} · ${t('app.name')}` : t('app.name')),
 })
 
-const chapters = useWorkChapters(work)
+const epubChapters = useWorkChapters(work)
+const seriesChapters = useSeriesChapters(chapters)
+const showSeriesChapters = computed(() => view.value === 'chapters' && chapters.value.length > 0)
 const loading = computed(() => state.value === 'idle' || state.value === 'loading')
 const showDirection = computed(() => series.value && meta.value?.kind === 'comic')
 
@@ -157,16 +164,43 @@ async function confirmDelete() {
             :work-id="readTarget.id"
             :action="action"
             :volume="series ? readTarget.volume : undefined"
-            :chapter="series ? undefined : chapters.current.value?.label"
+            :chapter-number="series ? readTarget.chapter : undefined"
+            :chapter="series ? undefined : epubChapters.current.value?.label"
           />
           <WorkProgress :progress="progress" :summary="summary" />
-          <WorkVolumes v-if="series" :rows="rows" :next-id="next?.id" :missing="missing" />
+          <template v-if="series">
+            <WorkSeriesViews
+              v-if="hasBothViews"
+              v-model="view"
+              :volume-count="volumes.length"
+              :chapter-count="chapters.length"
+            />
+            <WorkSeriesChapters
+              v-if="showSeriesChapters"
+              v-model:query="seriesChapters.query.value"
+              :rows="seriesChapters.rows.value"
+              :shown="seriesChapters.shown.value"
+              :next-id="nextChapter?.id"
+              :gaps="seriesChapters.gaps.value"
+              :missing-count="seriesChapters.missingCount.value"
+              :title-hidden="hasBothViews"
+            />
+            <WorkVolumes
+              v-else
+              :rows="rows"
+              :next-id="next?.id"
+              :missing="missing"
+              :title-hidden="hasBothViews"
+            />
+          </template>
           <WorkChapters
-            v-else-if="work && chapters.state.value !== 'none' && chapters.state.value !== 'idle'"
+            v-else-if="
+              work && epubChapters.state.value !== 'none' && epubChapters.state.value !== 'idle'
+            "
             :work-id="work.id"
-            :rows="chapters.rows.value"
-            :count="chapters.count.value"
-            :loading="chapters.state.value === 'loading'"
+            :rows="epubChapters.rows.value"
+            :count="epubChapters.count.value"
+            :loading="epubChapters.state.value === 'loading'"
           />
           <WorkDetails :meta="meta" class="lg:hidden" />
         </div>

@@ -44,6 +44,12 @@ useEventListener(document, 'keydown', (e: KeyboardEvent) => e.key === 'Tab' && s
 
 const title = computed(() => {
   const series = reader.series.value
+  if (series && props.work.chapter !== undefined) {
+    return t('reader.comic.chapterTitle', {
+      series: series.title,
+      chapter: formatIssueNumber(props.work.chapter),
+    })
+  }
   return series && props.work.volume !== undefined
     ? t('reader.comic.volumeTitle', { series: series.title, volume: props.work.volume })
     : props.work.title
@@ -127,7 +133,7 @@ defineShortcuts(
         @click="toggleChrome"
       >
         <template #end>
-          <ComicEnd :work="work" :next-volume="reader.nextVolume.value" @back="reader.goTo(0)" />
+          <ComicEnd :work="work" :next="reader.nextWork.value" @back="reader.goTo(0)" />
         </template>
       </ComicWebtoon>
 
@@ -145,7 +151,7 @@ defineShortcuts(
         @menu="toggleChrome"
       >
         <template #end>
-          <ComicEnd :work="work" :next-volume="reader.nextVolume.value" @back="reader.prev()" />
+          <ComicEnd :work="work" :next="reader.nextWork.value" @back="reader.prev()" />
         </template>
       </ComicPaged>
 

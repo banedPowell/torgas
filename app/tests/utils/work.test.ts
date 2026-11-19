@@ -3,6 +3,7 @@ import type { Series, Work } from '~/types/core'
 import { formatBytes, formatDate, formatLanguage } from '~/utils/format'
 import {
   buildVolumeRows,
+  defaultSeriesView,
   deriveSeriesStatus,
   describeTarget,
   formatVolumeNumbers,
@@ -99,11 +100,12 @@ describe('summarizeSeries et deriveSeriesStatus', () => {
 
   it('calcule terminés, total et progression moyenne', () => {
     expect(summarizeSeries([finished, reading, fresh])).toEqual({
+      unit: 'volumes',
       total: 3,
       finished: 1,
       progress: 0.5,
     })
-    expect(summarizeSeries([])).toEqual({ total: 0, finished: 0, progress: 0 })
+    expect(summarizeSeries([])).toEqual({ unit: 'volumes', total: 0, finished: 0, progress: 0 })
   })
 
   it('déduit le statut de la série', () => {
@@ -142,7 +144,7 @@ describe('resolveTarget', () => {
     const target = resolveTarget(nemo.id, sampleWorks, sampleSeries)
     expect(target?.kind).toBe('series')
     if (target?.kind === 'series')
-      expect(target.volumes.map((v) => v.id)).toEqual(['nemo-2', 'nemo-10'])
+      expect(target.works.map((v) => v.id)).toEqual(['nemo-2', 'nemo-10'])
   })
 
   it('ouvre la série à partir de l’identifiant d’un de ses volumes (lien de la bibliothèque)', () => {
@@ -175,7 +177,7 @@ describe('describeTarget', () => {
         language: 'en',
       }),
     ]
-    const meta = describeTarget({ kind: 'series', series: nemo, volumes })
+    const meta = describeTarget({ kind: 'series', series: nemo, works: volumes })
     expect(meta).toMatchObject({
       title: 'Little Nemo',
       authors: ['McCay'],
@@ -201,5 +203,28 @@ describe('formats de la fiche', () => {
     expect(formatDate('pas une date')).toBe('')
     expect(formatLanguage('fr')).toBe('français')
     expect(formatLanguage('en')).toBe('anglais')
+  })
+})
+
+describe('defaultSeriesView', () => {
+  const chapter = (n: number, extra: Partial<Work> = {}) =>
+    makeWork({ id: `c${n}`, title: `Série c${n}`, seriesId: nemo.id, chapter: n, ...extra })
+  const read = { status: 'finished' as const, progress: 1 }
+
+  it('ouvre les volumes s’il n’y a pas de chapitres ou rien de lu', () => {
+    expect(defaultSeriesView([volume(1)], [])).toBe('volumes')
+    expect(defaultSeriesView([volume(1)], [chapter(10)])).toBe('volumes')
+  })
+
+  it('ouvre les chapitres sans volume ou une fois les volumes lus', () => {
+    expect(defaultSeriesView([], [chapter(1)])).toBe('chapters')
+    expect(defaultSeriesView([volume(1, read)], [chapter(10)])).toBe('chapters')
+  })
+
+  it('suit la dernière œuvre lue', () => {
+    const recent = { lastReadAt: '2026-05-02T00:00:00.000Z' }
+    const older = { lastReadAt: '2026-05-01T00:00:00.000Z' }
+    expect(defaultSeriesView([volume(1, older)], [chapter(10, recent)])).toBe('chapters')
+    expect(defaultSeriesView([volume(1, recent)], [chapter(10, older)])).toBe('volumes')
   })
 })

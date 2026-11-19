@@ -286,6 +286,8 @@ export class WebBridge implements CoreBridge {
           analysis.volume ?? null,
           analysis.pageCount ?? null,
           at,
+          analysis.chapter ?? null,
+          analysis.chapterTitle ?? null,
         ],
       },
       {

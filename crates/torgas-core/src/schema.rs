@@ -5,7 +5,7 @@ use serde::Serialize;
 use crate::error::{CoreError, Result};
 
 /// Version du schéma, écrite dans `PRAGMA user_version`.
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 /// Script SQL créant toutes les tables d'une base neuve (idempotent : `IF NOT EXISTS`).
 ///
@@ -24,10 +24,16 @@ pub struct Migration {
 }
 
 /// Migrations par version croissante. Une base neuve reçoit directement [`SCHEMA_SQL`].
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 2,
-    sql: include_str!("migrations/0002_keep_reading_sessions.sql"),
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 2,
+        sql: include_str!("migrations/0002_keep_reading_sessions.sql"),
+    },
+    Migration {
+        version: 3,
+        sql: include_str!("migrations/0003_work_chapters.sql"),
+    },
+];
 
 /// Script qui amène une base de la version `from` à [`SCHEMA_VERSION`] : le schéma complet
 /// pour une base vide (`0`), sinon les migrations manquantes. `None` si la base est à jour.
@@ -103,7 +109,11 @@ mod tests {
     fn upgrade_sql_picks_schema_or_migrations() {
         assert_eq!(upgrade_sql(0).unwrap().as_deref(), Some(SCHEMA_SQL));
         assert_eq!(upgrade_sql(SCHEMA_VERSION).unwrap(), None);
-        assert_eq!(upgrade_sql(1).unwrap().as_deref(), Some(MIGRATIONS[0].sql));
+        assert_eq!(
+            upgrade_sql(1).unwrap(),
+            Some(format!("{}\n{}", MIGRATIONS[0].sql, MIGRATIONS[1].sql))
+        );
+        assert_eq!(upgrade_sql(2).unwrap().as_deref(), Some(MIGRATIONS[1].sql));
         assert!(matches!(
             upgrade_sql(SCHEMA_VERSION + 1),
             Err(CoreError::SchemaTooNew { .. })

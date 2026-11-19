@@ -23,21 +23,29 @@ sizeBytes: number,
  */
 title: string, 
 /**
- * Auteurs (EPUB uniquement).
+ * Auteurs (EPUB, ou `Writer` de `ComicInfo.xml` pour un CBZ).
  */
 authors: Array<string>, 
 /**
- * Langue (EPUB uniquement).
+ * Langue (EPUB, ou `LanguageISO` de `ComicInfo.xml` pour un CBZ).
  */
 language?: string, 
 /**
- * Série (métadonnées EPUB, sinon déduite du nom de fichier).
+ * Série (métadonnées EPUB ou `ComicInfo.xml`, sinon déduite du nom de fichier).
  */
 seriesTitle?: string, 
 /**
- * Volume dans la série.
+ * Volume dans la série (pour un chapitre : son volume, s'il est connu).
  */
 volume?: number, 
+/**
+ * Numéro de chapitre, si le fichier est un chapitre (nom de fichier ou `ComicInfo.xml`).
+ */
+chapter?: number, 
+/**
+ * Titre du chapitre (`Title` de `ComicInfo.xml`, sinon texte suivant son numéro).
+ */
+chapterTitle?: string, 
 /**
  * Nombre de pages (CBZ uniquement).
  */
