@@ -24,12 +24,21 @@ const SENTENCE =
   'Le vent léger traversait la plaine silencieuse tandis que les voyageurs cherchaient un abri pour la nuit, ' +
   'comptant les étoiles et rêvant du village qui les attendait au-delà de la colline.'
 
+/** Texte de la note de bas de page, à la Word/Calibre : appel au chapitre 1, note au chapitre 3. */
+export const EPUB_FOOTNOTE = 'Une note de bas de page rangée dans un autre fichier.'
+
+const FOOTNOTE_REF =
+  '<a href="c3.xhtml#_ftn1" id="_ftnref1"><span class="MsoFootnoteReference">[1]</span></a>'
+const FOOTNOTE = `<div id="ftn1"><p><a href="c1.xhtml#_ftnref1" id="_ftn1">[1]</a> ${EPUB_FOOTNOTE}</p></div>`
+
 function paragraph(chapter: number, index: number): string {
-  return `<p>${SENTENCE} Chapitre ${chapter + 1}, paragraphe ${index + 1} : ${SENTENCE}</p>`
+  const ref = chapter === 0 && index === 0 ? FOOTNOTE_REF : ''
+  return `<p>${SENTENCE}${ref} Chapitre ${chapter + 1}, paragraphe ${index + 1} : ${SENTENCE}</p>`
 }
 
 function chapterXhtml(chapter: number): string {
-  const body = Array.from({ length: 40 }, (_, i) => paragraph(chapter, i)).join('\n')
+  const paragraphs = Array.from({ length: 40 }, (_, i) => paragraph(chapter, i))
+  const body = [...paragraphs, ...(chapter === 2 ? [FOOTNOTE] : [])].join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fr" lang="fr">
 <head><meta charset="utf-8"/><title>${EPUB_CHAPTERS[chapter]}</title></head>
@@ -40,7 +49,10 @@ ${body}
 </html>`
 }
 
-/** EPUB 3 minimal : 3 chapitres de 40 paragraphes, sommaire (nav) et pas de couverture. */
+/**
+ * EPUB 3 minimal : 3 chapitres de 40 paragraphes, une note de bas de page, sommaire (nav) et
+ * pas de couverture.
+ */
 export function makeEpub(): Fixture {
   const files: Zippable = {
     // `mimetype` en premier et non compressé, comme l'exige la spécification EPUB.

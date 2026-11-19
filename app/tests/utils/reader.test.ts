@@ -6,6 +6,7 @@ import {
   readerKeyAction,
   readerTapAction,
   sanitizeReaderSettings,
+  tapZone,
 } from '~/utils/reader'
 
 describe('sanitizeReaderSettings', () => {
@@ -58,9 +59,16 @@ describe('actions du lecteur', () => {
   })
 
   it('découpe l’écran en trois zones de tap', () => {
-    expect(readerTapAction(0.1)).toBe('left')
-    expect(readerTapAction(0.5)).toBe('toggle')
-    expect(readerTapAction(0.9)).toBe('right')
+    expect(readerTapAction(0.1, 0.5)).toBe('left')
+    expect(readerTapAction(0.5, 0.5)).toBe('toggle')
+    expect(readerTapAction(0.9, 0.9)).toBe('right')
+  })
+
+  it('affiche la barre sur toute la bande du haut (#44)', () => {
+    expect(tapZone(0.05, 0.1)).toBe('menu')
+    expect(tapZone(0.95, 0.24)).toBe('menu')
+    expect(tapZone(0.95, 0.25)).toBe('right')
+    expect(readerTapAction(0.1, 0)).toBe('toggle')
   })
 })
 

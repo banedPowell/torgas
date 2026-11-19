@@ -110,11 +110,28 @@ export function readerKeyAction(e: KeyLike): ReaderAction | null {
   return null
 }
 
-/** Zones de tap : tiers gauche et droit tournent la page, le centre affiche la barre. */
-export function readerTapAction(ratio: number): ReaderAction {
-  if (ratio < 1 / 3) return 'left'
-  if (ratio > 2 / 3) return 'right'
-  return 'toggle'
+/** Zone touchée sur l'écran de lecture (EPUB comme manga). */
+export type TapZone = 'left' | 'right' | 'menu'
+
+/** Hauteur de la bande du haut (fraction de l'écran) qui affiche toujours la barre. */
+export const TAP_TOP_BAND = 0.25
+
+/**
+ * Zones de tap, en fractions (0 à 1) de la largeur et de la hauteur de l'écran : toute la bande
+ * du haut et le tiers central affichent la barre ; plus bas, les tiers gauche et droit tournent
+ * la page.
+ */
+export function tapZone(x: number, y: number): TapZone {
+  if (y < TAP_TOP_BAND) return 'menu'
+  if (x < 1 / 3) return 'left'
+  if (x > 2 / 3) return 'right'
+  return 'menu'
+}
+
+/** Action d'un tap dans le lecteur EPUB (position en fractions de l'écran). */
+export function readerTapAction(x: number, y: number): ReaderAction {
+  const zone = tapZone(x, y)
+  return zone === 'menu' ? 'toggle' : zone
 }
 
 interface TocNode {

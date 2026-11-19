@@ -1,4 +1,5 @@
 import type { ReadingDirection, Work } from '~/types/core'
+import { tapZone } from './reader'
 
 /** Mise en page effective du lecteur manga. */
 export type ComicLayout = 'single' | 'double' | 'webtoon'
@@ -78,17 +79,19 @@ export function comicStepForSide(side: ComicSide, direction: ReadingDirection): 
   return side === forward ? 1 : -1
 }
 
-/** Action d'un tap selon sa position horizontale : tiers gauche, centre ou tiers droit. */
+/**
+ * Action d'un tap selon sa position (en pixels) dans la zone de lecture, découpée par `tapZone` :
+ * bande du haut et centre → barre, côtés → page voisine selon le sens de lecture.
+ */
 export function comicTapAction(
-  x: number,
-  width: number,
+  point: { x: number; y: number },
+  size: { width: number; height: number },
   direction: ReadingDirection,
 ): ComicTapAction {
-  if (width <= 0) return 'menu'
-  const ratio = x / width
-  if (ratio < 1 / 3) return comicStepForSide('left', direction) === 1 ? 'next' : 'prev'
-  if (ratio > 2 / 3) return comicStepForSide('right', direction) === 1 ? 'next' : 'prev'
-  return 'menu'
+  if (size.width <= 0 || size.height <= 0) return 'menu'
+  const zone = tapZone(point.x / size.width, point.y / size.height)
+  if (zone === 'menu') return 'menu'
+  return comicStepForSide(zone, direction) === 1 ? 'next' : 'prev'
 }
 
 /** Pages à précharger après la planche courante. */

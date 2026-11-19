@@ -224,6 +224,12 @@
       "title": "Impossible d'ouvrir ce livre",
       "description": "Le fichier est peut-être endommagé ou dans un format non pris en charge."
     },
+    "footnote": {
+      "title": "Note {label}",
+      "untitled": "Note",
+      "goTo": "Aller à la note",
+      "close": "Fermer la note"
+    },
     "toolbar": {
       "toc": "Sommaire",
       "addBookmark": "Ajouter un marque-page",
