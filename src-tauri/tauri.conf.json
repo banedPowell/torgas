@@ -1,0 +1,80 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Torgas",
+  "mainBinaryName": "torgas",
+  "version": "0.1.0",
+  "identifier": "app.torgas.desktop",
+  "build": {
+    "frontendDist": "../app/.output/public",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm generate"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Torgas",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 390,
+        "minHeight": 600,
+        "resizable": true,
+        "center": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline' blob:",
+        "img-src": "'self' blob: data: torgas: http://torgas.localhost",
+        "font-src": "'self' data: blob:",
+        "media-src": "'self' blob: data:",
+        "connect-src": "'self' ipc: http://ipc.localhost torgas: http://torgas.localhost",
+        "frame-src": "'self' blob:",
+        "worker-src": "'self' blob:",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'"
+      },
+      "dangerousDisableAssetCspModification": ["style-src"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Lecteur universel local-first",
+    "longDescription": "Torgas lit vos EPUB et CBZ, rangés dans une bibliothèque locale.",
+    "copyright": "AGPL-3.0-only",
+    "license": "AGPL-3.0-only",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["epub"],
+        "name": "EPUB",
+        "description": "Livre numérique EPUB",
+        "mimeType": "application/epub+zip",
+        "contentTypes": ["org.idpf.epub-container"],
+        "role": "Viewer",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["cbz"],
+        "name": "CBZ",
+        "description": "Bande dessinée (archive CBZ)",
+        "mimeType": "application/vnd.comicbook+zip",
+        "role": "Viewer",
+        "rank": "Alternate"
+      }
+    ]
+  }
+}

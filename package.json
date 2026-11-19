@@ -16,6 +16,10 @@
     "typecheck": "pnpm --filter app typecheck",
     "lint": "pnpm --filter app lint",
     "pretest": "pnpm ensure:wasm",
-    "test": "pnpm --filter app test"
+    "test": "pnpm --filter app test",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.5"
   }
 }
