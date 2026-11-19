@@ -247,7 +247,10 @@ export class WebBridge implements CoreBridge {
     try {
       await this.db.writeFile(bookPath, bytes)
       const storedCover = coverPath && (await this.writeCover(coverPath, analysis.cover!))
-      await this.db.batch(this.insertStatements(workId, analysis, bookPath, storedCover || null))
+      const series = await this.seriesFor(analysis.seriesTitle)
+      await this.db.batch(
+        this.insertStatements(workId, analysis, bookPath, storedCover || null, series),
+      )
     } catch (error) {
       // Import concurrent (autre onglet) du même fichier : c'est un doublon, pas une erreur.
       const duplicate = await this.findBySha256(analysis.sha256).catch(() => null)
@@ -260,17 +263,33 @@ export class WebBridge implements CoreBridge {
     return { status: 'imported', work: await this.requireWork(workId) }
   }
 
+  /**
+   * Série de l'œuvre : une série existante de même clé (`seriesKey` du cœur : casse, accents
+   * et ponctuation ignorés, comme `import_analysis` côté Rust), sinon une nouvelle à créer.
+   */
+  private async seriesFor(title: string | undefined): Promise<SeriesPlacement | null> {
+    const trimmed = title?.trim()
+    if (!trimmed) return null
+    const key = this.wasm.seriesKey(trimmed)
+    const rows = await this.db.query(Sql.LIST_SERIES)
+    const found = rows.find((row) => this.wasm.seriesKey(String(row.title)) === key)
+    return found
+      ? { id: String(found.id), created: false }
+      : { id: uuidv7(), created: true, title: trimmed }
+  }
+
   private insertStatements(
     workId: string,
     analysis: Analysis,
     bookPath: string,
     coverPath: string | null,
+    series: SeriesPlacement | null,
   ) {
     const at = now()
-    const seriesTitle = analysis.seriesTitle?.trim() || null
     const statements: { sql: string; params: SqlValue[] }[] = []
-    if (seriesTitle) {
-      statements.push({ sql: Sql.INSERT_SERIES, params: [uuidv7(), seriesTitle, at] })
+    if (series?.created) {
+      const direction = analysis.direction ?? 'ltr'
+      statements.push({ sql: Sql.INSERT_SERIES, params: [series.id, series.title!, direction, at] })
     }
     statements.push(
       {
@@ -279,10 +298,10 @@ export class WebBridge implements CoreBridge {
           workId,
           analysis.title,
           JSON.stringify(analysis.authors),
-          analysis.format === 'cbz' ? 'comic' : 'novel',
+          analysis.kind,
           analysis.language ?? null,
           coverPath,
-          seriesTitle,
+          series?.id ?? null,
           analysis.volume ?? null,
           analysis.pageCount ?? null,
           at,
@@ -392,6 +411,13 @@ export class WebBridge implements CoreBridge {
     this.persistRequested = true
     navigator.storage.persist?.().catch(() => {})
   }
+}
+
+/** Série d'une œuvre importée : existante, ou à créer avec ce titre. */
+interface SeriesPlacement {
+  id: string
+  created: boolean
+  title?: string
 }
 
 function locatorParams(locator: Locator): SqlValue[] {

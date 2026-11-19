@@ -218,3 +218,74 @@ export function makeCbz(name = `${CBZ_TITLE}.cbz`, tint = 0): Fixture {
     buffer: Buffer.from(zipSync(files)),
   }
 }
+
+/** Nom d'un CBZ d'Anna's Archive : segments ` -- `, tome `T013`, sans `ComicInfo.xml`. */
+export const ANNA_CBZ_NAME =
+  'One Piece T013 -- Eiichiro Oda -- 2014 -- Glénat Manga -- isbn13 9782331011634 -- ' +
+  '084d0c76c3d6157912abf8e80f0c6bca -- Anna’s Archive.cbz'
+
+/** CBZ façon scan d'éditeur (pages `109-00`…), de la même série que l'EPUB Kindle. */
+export function makeAnnaCbz(): Fixture {
+  const files: Zippable = {}
+  for (let i = 0; i < 3; i++) {
+    files[`109-${String(i).padStart(2, '0')}.png`] = [makePng([200, 40 + i * 50, 60]), { level: 0 }]
+  }
+  return {
+    name: ANNA_CBZ_NAME,
+    mimeType: 'application/vnd.comicbook+zip',
+    buffer: Buffer.from(zipSync(files)),
+  }
+}
+
+const KINDLE_PAGES = [0, 1, 2]
+
+/**
+ * EPUB Kindle d'un manga (One Piece, Vol. 67) : `fixed-layout`, `book-type` comic, sujets
+ * Manga, pages faites d'une image. Nom au format Anna's Archive.
+ */
+export function makeKindleMangaEpub(): Fixture {
+  const manifest = KINDLE_PAGES.map(
+    (n) =>
+      `<item id="p${n}" href="p${n}.xhtml" media-type="application/xhtml+xml"/>` +
+      `<item id="img${n}" href="images/p${n}.png" media-type="image/png"/>`,
+  ).join('\n    ')
+  const spine = KINDLE_PAGES.map((n) => `<itemref idref="p${n}"/>`).join('')
+  const files: Zippable = {
+    mimetype: [strToU8('application/epub+zip'), { level: 0 }],
+    'META-INF/container.xml': strToU8(`<?xml version="1.0"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
+</container>`),
+    'OEBPS/content.opf': strToU8(`<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="uid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+    <dc:identifier id="uid">urn:uuid:9a1e0b6e-7a49-4b7d-9f27-0d4f4f3f3a67</dc:identifier>
+    <dc:title>One Piece, Vol. 67</dc:title>
+    <dc:creator opf:role="aut">Eiichiro Oda</dc:creator>
+    <dc:language>en</dc:language>
+    <dc:subject>Manga</dc:subject>
+    <dc:subject>Comics &amp; Graphic Novels</dc:subject>
+    <meta name="fixed-layout" content="true"/>
+    <meta name="book-type" content="comic"/>
+    <meta name="cover" content="img0"/>
+  </metadata>
+  <manifest>
+    ${manifest}
+  </manifest>
+  <spine page-progression-direction="rtl">${spine}</spine>
+</package>`),
+  }
+  for (const n of KINDLE_PAGES) {
+    files[`OEBPS/p${n}.xhtml`] = strToU8(`<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>${n}</title></head>
+<body><div><img src="images/p${n}.png" alt=""/></div></body></html>`)
+    files[`OEBPS/images/p${n}.png`] = [makePng([40, 80 + n * 40, 200]), { level: 0 }]
+  }
+  return {
+    name:
+      'One Piece, Vol_ 67 67 -- Oda, Eiichiro -- One Piece #67, 2013 -- VIZ Media LLC -- ' +
+      '581d0c76c3d6157912abf8e80f0c6bca -- Anna’s Archive.epub',
+    mimeType: 'application/epub+zip',
+    buffer: Buffer.from(zipSync(files)),
+  }
+}

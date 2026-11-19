@@ -18,6 +18,7 @@ use crate::model::{
     Bookmark, FINISHED_THRESHOLD, Locator, ReadingDirection, ReadingSession, ReadingStatus, Series,
     Work,
 };
+use crate::naming::series_key;
 use crate::schema::upgrade_sql;
 #[cfg(test)]
 use crate::schema::{SCHEMA_SQL, SCHEMA_VERSION};
@@ -147,13 +148,24 @@ impl Library {
         let tx = self.conn.transaction()?;
         let series_id = match analysis.series_title.as_deref().map(str::trim) {
             Some(title) if !title.is_empty() => {
-                let existing: Option<String> = tx
-                    .query_row(
-                        "SELECT id FROM series WHERE title = ?1 COLLATE NOCASE",
-                        [title],
-                        |row| row.get(0),
-                    )
-                    .optional()?;
+                // Rapprochement par clé (casse, accents, ponctuation) : un EPUB « One Piece. »
+                // rejoint la série « ONE PIECE » d'un CBZ. Les séries sont peu nombreuses.
+                let key = series_key(title);
+                let existing: Option<String> = {
+                    let mut stmt = tx.prepare("SELECT id, title FROM series")?;
+                    let rows = stmt.query_map([], |row| {
+                        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+                    })?;
+                    let mut found = None;
+                    for row in rows {
+                        let (id, existing_title) = row?;
+                        if series_key(&existing_title) == key {
+                            found = Some(id);
+                            break;
+                        }
+                    }
+                    found
+                };
                 if let Some(id) = existing {
                     Some(id)
                 } else {
@@ -161,7 +173,12 @@ impl Library {
                     tx.execute(
                         "INSERT INTO series (id, title, direction, created_at)
                          VALUES (?1, ?2, ?3, ?4)",
-                        params![id, title, ReadingDirection::Ltr.as_str(), now],
+                        params![
+                            id,
+                            title,
+                            analysis.direction.unwrap_or(ReadingDirection::Ltr).as_str(),
+                            now
+                        ],
                     )?;
                     Some(id)
                 }
@@ -176,7 +193,7 @@ impl Library {
                 work_id,
                 analysis.title,
                 authors,
-                analysis.format.default_kind().as_str(),
+                analysis.kind.as_str(),
                 analysis.language,
                 options.cover_url,
                 series_id,
@@ -1096,6 +1113,62 @@ mod tests {
             )
             .unwrap();
         assert_eq!(index, 1);
+    }
+
+    #[test]
+    fn manga_epub_joins_the_cbz_series() {
+        let mut lib = library();
+        let epub = fixtures::epub_comic(
+            r##"<dc:title>Saga, tome 2</dc:title><dc:subject>Manga</dc:subject>
+               <meta property="rendition:layout">pre-paginated</meta>
+               <meta property="belongs-to-collection" id="c">SAGA</meta>
+               <meta refines="#c" property="group-position">2</meta>"##,
+            r#"page-progression-direction="rtl""#,
+            true,
+        );
+        let v2 = import(&mut lib, "saga-2.epub", &epub);
+        assert_eq!(v2.kind, WorkKind::Comic);
+        assert_eq!(v2.format, Format::Epub);
+        assert_eq!(v2.volume, Some(2.0));
+        let series_id = v2.series_id.clone().unwrap();
+        // Série créée par le manga EPUB : droite → gauche, comme son spine.
+        assert_eq!(
+            lib.get_series(&series_id).unwrap().unwrap().direction,
+            ReadingDirection::Rtl
+        );
+
+        let v1 = import(&mut lib, "Saga_v01.cbz", &fixtures::cbz_p1_to_p12());
+        assert_eq!(v1.series_id.as_deref(), Some(series_id.as_str()));
+        let ids: Vec<_> = lib
+            .series_works(&series_id)
+            .unwrap()
+            .into_iter()
+            .map(|w| w.id)
+            .collect();
+        assert_eq!(ids, [v1.id, v2.id]);
+        assert_eq!(lib.list_series().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn one_piece_cbz_and_kindle_epub_share_a_series() {
+        let mut lib = library();
+        let v13 = import(&mut lib, fixtures::ANNA_CBZ_NAME, &fixtures::cbz_scan());
+        let v67 = import(
+            &mut lib,
+            fixtures::ANNA_EPUB_NAME,
+            &fixtures::epub_kindle_manga(),
+        );
+        assert_eq!((v13.kind, v67.kind), (WorkKind::Comic, WorkKind::Comic));
+        assert_eq!((v13.volume, v67.volume), (Some(13.0), Some(67.0)));
+        assert_eq!(v13.series_id, v67.series_id);
+        let series = lib.list_series().unwrap();
+        assert_eq!(series.len(), 1);
+        assert_eq!(series[0].title, "One Piece");
+
+        // Casse, accents et ponctuation finale n'y changent rien.
+        let other = import(&mut lib, "ONE PIECE. v02.cbz", &fixtures::cbz_p1_to_p12());
+        assert_eq!(other.series_id, v13.series_id);
+        assert_eq!(lib.list_series().unwrap().len(), 1);
     }
 
     #[test]

@@ -82,6 +82,13 @@ pub fn parse_volume(name: &str) -> Result<JsValue, JsError> {
     }
 }
 
+/// Clé de rapprochement d'un titre de série (casse, accents et ponctuation ignorés) : deux
+/// titres de même clé désignent la même série.
+#[wasm_bindgen(js_name = seriesKey)]
+pub fn series_key(title: &str) -> String {
+    naming::series_key(title)
+}
+
 /// Archive CBZ ouverte en mémoire, pages triées naturellement.
 #[wasm_bindgen]
 pub struct CbzArchive {

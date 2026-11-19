@@ -148,6 +148,11 @@
       "resumeIssue": "Reprendre le chapitre {chapter} à {percent}",
       "rereadIssue": "Relire le chapitre {chapter}"
     },
+    "epubComic": {
+      "title": "Manga au format EPUB",
+      "seriesTitle": "Cette série contient des EPUB",
+      "description": "Le CBZ est plus adapté aux mangas et mieux géré par Torgas : double page, sens de lecture, miniatures, volume suivant. Les EPUB restent lisibles avec le lecteur de livres."
+    },
     "views": {
       "label": "Afficher la série par",
       "volumes": "Volumes",

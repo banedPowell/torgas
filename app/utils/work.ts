@@ -98,6 +98,14 @@ export function deriveSeriesStatus(volumes: readonly Work[]): ReadingStatus {
   return started ? 'reading' : 'to_read'
 }
 
+/**
+ * Manga ou BD au format EPUB (reconnu par le cœur à l'import) : lisible avec le lecteur EPUB,
+ * mais le CBZ est mieux géré (double page, sens de lecture, volume suivant).
+ */
+export function isEpubComic(work: Pick<Work, 'format' | 'kind'>): boolean {
+  return work.format === 'epub' && work.kind === 'comic'
+}
+
 /** Bouton principal : lire, reprendre à N % ou relire. */
 export function readAction(work: Pick<Work, 'status' | 'progress'>): ReadAction {
   const progress = clampProgress(work.progress)

@@ -40,6 +40,8 @@ const seriesChapters = useSeriesChapters(chapters)
 const showSeriesChapters = computed(() => view.value === 'chapters' && chapters.value.length > 0)
 const loading = computed(() => state.value === 'idle' || state.value === 'loading')
 const showDirection = computed(() => series.value && meta.value?.kind === 'comic')
+/** Manga ou BD en EPUB (l'œuvre, ou un volume de la série) : on conseille le CBZ. */
+const epubComic = computed(() => deletable.value.some(isEpubComic))
 
 // Suppression : menu « Plus d'actions », confirmation, puis retour à la bibliothèque.
 const confirmingDelete = ref(false)
@@ -168,6 +170,14 @@ async function confirmDelete() {
             :chapter="series ? undefined : epubChapters.current.value?.label"
           />
           <WorkProgress :progress="progress" :summary="summary" />
+          <UAlert
+            v-if="epubComic"
+            color="neutral"
+            variant="subtle"
+            icon="i-lucide-info"
+            :title="$t(series ? 'work.epubComic.seriesTitle' : 'work.epubComic.title')"
+            :description="$t('work.epubComic.description')"
+          />
           <template v-if="series">
             <WorkSeriesViews
               v-if="hasBothViews"

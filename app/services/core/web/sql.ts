@@ -24,15 +24,16 @@ export const FILE_PATH = 'SELECT path FROM file WHERE work_id = ? ORDER BY added
 export const LIST_SERIES = 'SELECT id, title, direction FROM series ORDER BY title COLLATE NOCASE'
 export const SET_SERIES_DIRECTION = 'UPDATE series SET direction = ?2 WHERE id = ?1 RETURNING id'
 
-/** Série créée si absente (titre comparé sans casse, index unique `series_title_idx`). */
+/**
+ * Nouvelle série, avec le sens de lecture annoncé par le fichier. La série existante de même clé
+ * (`seriesKey`) est cherchée avant, par le `WebBridge`, comme `import_analysis` côté Rust.
+ */
 export const INSERT_SERIES = `INSERT INTO series (id, title, direction, created_at)
-  SELECT ?1, ?2, 'ltr', ?3
-  WHERE NOT EXISTS (SELECT 1 FROM series WHERE title = ?2 COLLATE NOCASE)`
+  VALUES (?1, ?2, ?3, ?4)`
 
 export const INSERT_WORK = `INSERT INTO work (id, title, authors, kind, language, cover_url,
     series_id, volume, page_count, created_at, chapter, chapter_title)
-  VALUES (?1, ?2, ?3, ?4, ?5, ?6,
-    (SELECT id FROM series WHERE title = ?7 COLLATE NOCASE), ?8, ?9, ?10, ?11, ?12)`
+  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
 
 export const INSERT_FILE = `INSERT INTO file (id, work_id, format, sha256, size_bytes, path, added_at)
   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`

@@ -5,7 +5,11 @@ const KNOWN_EXTENSIONS: [&str; 7] = ["cbz", "cbr", "cb7", "zip", "epub", "pdf", 
 
 /// Marqueurs de volume reconnus avant le numéro, du plus long au plus court
 /// (comparaison insensible à la casse).
-const VOLUME_MARKERS: [&str; 6] = ["volume", "tome", "vol.", "vol", "v", "t"];
+const VOLUME_MARKERS: [&str; 7] = ["volume", "tome", "vol.", "vol", "t.", "v", "t"];
+
+/// Séparateur des noms de fichiers des bibliothèques en ligne (Anna's Archive, Library
+/// Genesis) : `Titre -- Auteur -- Année -- Éditeur -- isbn13 … -- empreinte -- Source`.
+const SEGMENT_SEPARATOR: &str = " -- ";
 
 /// Marqueurs de chapitre reconnus avant le numéro, du plus long au plus court
 /// (comparaison insensible à la casse). `#` désigne un numéro de parution, donc un chapitre.
@@ -29,10 +33,31 @@ pub struct NameInfo {
     pub chapter_title: Option<String>,
 }
 
-/// Nom de fichier sans dossier ni extension connue, `_` remplacés par des espaces.
+/// Nom de fichier sans dossier ni extension connue, `_` remplacés par des espaces. Un nom
+/// en segments ` -- ` (Anna's Archive) est réduit à son premier segment, le titre.
 ///
 /// Sert aussi de titre par défaut quand le fichier n'en fournit pas.
 pub fn clean_stem(filename: &str) -> String {
+    let stem = full_stem(filename);
+    match stem.split_once(SEGMENT_SEPARATOR) {
+        Some((title, _)) if !title.trim().is_empty() => title.trim().to_owned(),
+        _ => stem,
+    }
+}
+
+/// Auteur d'un nom en segments ` -- ` (Anna's Archive) : le deuxième segment, s'il y en a
+/// au moins trois (`Titre -- Auteur -- Année …`).
+pub fn author_from_name(filename: &str) -> Option<String> {
+    let stem = full_stem(filename);
+    let segments: Vec<&str> = stem.split(SEGMENT_SEPARATOR).map(str::trim).collect();
+    match segments.as_slice() {
+        [_, author, _, ..] if !author.is_empty() => Some((*author).to_owned()),
+        _ => None,
+    }
+}
+
+/// Nom de fichier sans dossier ni extension connue, `_` remplacés par des espaces.
+fn full_stem(filename: &str) -> String {
     let base = filename.rsplit(['/', '\\']).next().unwrap_or(filename);
     let stem = match base.rsplit_once('.') {
         Some((stem, ext))
@@ -249,6 +274,45 @@ pub fn parse_name(filename: &str) -> Option<NameInfo> {
     })
 }
 
+/// Forme canonique d'un titre de série, appliquée à toutes les sources (nom de fichier,
+/// `ComicInfo.xml`, métadonnées EPUB) pour qu'un EPUB et un CBZ de la même série se
+/// retrouvent : `_` et espaces multiples ramenés à une espace, apostrophes typographiques
+/// droites, séparateurs retirés aux bords. La casse est comparée à part (`COLLATE NOCASE`).
+pub fn normalize_series_title(title: &str) -> String {
+    let text = title.replace('_', " ").replace(['’', 'ʼ', '‘'], "'");
+    let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    trim_separators(&collapsed).to_owned()
+}
+
+/// Minuscules sans accents (accents courants du français, de l'espagnol, de l'allemand).
+pub fn fold(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .map(|c| match c {
+            'à' | 'â' | 'ä' | 'á' | 'ã' => 'a',
+            'é' | 'è' | 'ê' | 'ë' => 'e',
+            'î' | 'ï' | 'í' | 'ì' => 'i',
+            'ô' | 'ö' | 'ó' | 'ò' | 'õ' => 'o',
+            'û' | 'ü' | 'ù' | 'ú' => 'u',
+            'ç' => 'c',
+            'ñ' => 'n',
+            'ÿ' => 'y',
+            other => other,
+        })
+        .collect()
+}
+
+/// Clé de rapprochement des séries : deux titres de même clé désignent la même série, quelle
+/// que soit la source (nom de fichier, `ComicInfo.xml`, OPF). Insensible à la casse, aux
+/// accents et à la ponctuation (`One Piece`, `ONE PIECE.`, `One-Piece` donnent `one piece`).
+pub fn series_key(title: &str) -> String {
+    fold(title)
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|word| !word.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 #[cfg(test)]
 #[allow(clippy::float_cmp)]
 mod tests {
@@ -382,6 +446,61 @@ mod tests {
         assert_eq!(info.chapter, None);
         assert_eq!(info.volume, Some(3.0));
         assert_eq!(parse_name("Titre.cbz"), None);
+    }
+
+    const ANNA_CBZ: &str = "One Piece T013 -- Eiichiro Oda -- 2014 -- Glénat Manga -- \
+        isbn13 9782331011634 -- 084d0c76c3d6157912abf8e80f0c6bca -- Anna’s Archive.cbz";
+    const ANNA_EPUB: &str = "One Piece, Vol_ 67 67 -- Oda, Eiichiro -- One Piece #67, 2013 -- \
+        VIZ Media LLC -- 581d0c76c3d6157912abf8e80f0c6bca -- Anna’s Archive.epub";
+
+    #[test]
+    fn annas_archive_names_keep_the_first_segment() {
+        assert_eq!(clean_stem(ANNA_CBZ), "One Piece T013");
+        expect(ANNA_CBZ, "One Piece", 13.0);
+        assert_eq!(author_from_name(ANNA_CBZ).as_deref(), Some("Eiichiro Oda"));
+        // Le `#67` du troisième segment n'en fait pas un chapitre.
+        assert_eq!(parse_name(ANNA_EPUB).unwrap().chapter, None);
+        assert_eq!(
+            author_from_name(ANNA_EPUB).as_deref(),
+            Some("Oda, Eiichiro")
+        );
+        assert_eq!(author_from_name("Titre -- Sous-titre.cbz"), None);
+        assert_eq!(author_from_name("One Piece v01.cbz"), None);
+    }
+
+    #[test]
+    fn tome_forms() {
+        expect("One Piece Tome 13.cbz", "One Piece", 13.0);
+        expect("One Piece T.13.cbz", "One Piece", 13.0);
+        expect("One Piece T13", "One Piece", 13.0);
+        expect("One Piece, Vol. 67", "One Piece", 67.0);
+    }
+
+    #[test]
+    fn series_keys_ignore_case_accents_and_punctuation() {
+        let key = series_key("One Piece");
+        for title in [
+            "ONE PIECE",
+            "One Piece.",
+            "One-Piece",
+            " one  piece ",
+            "One Piece,",
+        ] {
+            assert_eq!(series_key(title), key, "{title}");
+        }
+        assert_eq!(series_key("Été"), series_key("ETE"));
+        assert_eq!(series_key("L’Attaque des Titans"), "l attaque des titans");
+        assert_ne!(series_key("One Piece"), series_key("One Punch"));
+    }
+
+    #[test]
+    fn series_titles_are_normalized() {
+        assert_eq!(
+            normalize_series_title("  L’Attaque_des   Titans - "),
+            "L'Attaque des Titans"
+        );
+        assert_eq!(normalize_series_title("One Piece"), "One Piece");
+        assert_eq!(normalize_series_title(" - "), "");
     }
 
     #[test]
