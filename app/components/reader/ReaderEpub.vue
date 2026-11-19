@@ -13,6 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const router = useRouter()
+const reducedMotion = usePreferredReducedMotion()
 const reader = useReader(() => props.workId)
 const { settings, resolvedTheme, update, reset } = useReaderSettings()
 const chrome = useReaderChrome()
@@ -60,6 +61,9 @@ watch([() => reader.state.value, container], async ([state, el]) => {
     footnotes.attach(el)
     container.value?.append(el)
     await el.open(reader.file.value!)
+    // Pages qui glissent (tour de page, fin d'un geste au trackpad) plutôt que de sauter, sauf si
+    // le système demande de réduire les animations.
+    if (reducedMotion.value !== 'reduce') el.renderer.setAttribute('animated', '')
     view.value = el
     void toc.load(el.book)
     applyStyles()
@@ -96,19 +100,37 @@ function onRelocate(d: FoliateRelocateDetail) {
 watch(toc.entries, () => lastDetail && onRelocate(lastDetail))
 
 // Le livre est rendu dans des iframes : on y relaie les taps et le clavier.
-// Glissement horizontal à deux doigts (trackpad) : une page par geste. Les événements
-// horizontaux sont interceptés pour que le navigateur ne les prenne pas pour « page précédente ».
-const wheelPager = createWheelPager()
+// Glissement à deux doigts au trackpad, façon Livres d'Apple : le texte suit les doigts (via le
+// paginateur de foliate, comme au toucher), puis s'aimante sur la page voisine ou revient.
+// Les événements horizontaux sont interceptés : le navigateur n'y voit pas « page précédente ».
+const wheelGesture = createWheelGesture()
+const endWheelGesture = useDebounceFn(() => {
+  const renderer = view.value?.renderer
+  const { commit, offset } = wheelGesture.finish()
+  if (!renderer?.size) return
+  // Décalage restant (en pages) pour atteindre la page visée depuis la position actuelle.
+  const shift = (commit * renderer.size - offset) / renderer.size
+  renderer.snap(shift, shift)
+}, wheelGesture.gestureGap)
+
 function onWheel(e: WheelEvent) {
-  const { side, horizontal } = wheelPager.push({
-    deltaX: e.deltaX,
-    deltaY: e.deltaY,
-    deltaMode: e.deltaMode,
-    // Horloge de la page principale : celle des iframes de sections diffère d'une section à l'autre.
-    timeStamp: performance.now(),
-  })
-  if (horizontal) e.preventDefault()
-  if (side) run(side)
+  const renderer = view.value?.renderer
+  if (!renderer || renderer.scrolled || !renderer.size) return
+  const { consume, move } = wheelGesture.push(
+    {
+      deltaX: e.deltaX,
+      deltaY: e.deltaY,
+      deltaMode: e.deltaMode,
+      ctrlKey: e.ctrlKey,
+      // Horloge de la page principale : celle des iframes de sections diffère d'une section à l'autre.
+      timeStamp: performance.now(),
+    },
+    renderer.size,
+  )
+  if (!consume) return
+  e.preventDefault()
+  if (move) renderer.scrollBy(move, move)
+  void endWheelGesture()
 }
 
 function onSectionLoad(doc: Document) {

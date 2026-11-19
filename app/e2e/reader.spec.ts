@@ -46,7 +46,13 @@ test.describe('Lecteur EPUB : notes et barre', () => {
     await expect
       .poll(() =>
         Promise.all(
-          page.frames().map((f) => f.getByRole('heading', { name: EPUB_CHAPTERS[2] }).count()),
+          page.frames().map((f) =>
+            // Frame détachée pendant le changement de section : « pas encore ».
+            f
+              .getByRole('heading', { name: EPUB_CHAPTERS[2] })
+              .count()
+              .catch(() => 0),
+          ),
         ).then((counts) => counts.some((n) => n > 0)),
       )
       .toBe(true)

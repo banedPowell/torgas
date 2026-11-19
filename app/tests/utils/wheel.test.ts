@@ -1,32 +1,57 @@
 import { describe, expect, it } from 'vitest'
-import { createWheelPager } from '~/utils/wheel'
+import { createWheelGesture, wheelSide } from '~/utils/wheel'
 
 const wheel = (deltaX: number, timeStamp: number, deltaY = 0) => ({ deltaX, deltaY, timeStamp })
 
-describe('createWheelPager', () => {
-  it('tourne une seule page par geste, inertie comprise', () => {
-    const pager = createWheelPager()
-    const sides = [0, 16, 32, 48, 64, 80, 96, 112].map((t) => pager.push(wheel(20, t)).side)
-    expect(sides.filter(Boolean)).toEqual(['right'])
+/** Rejoue un geste : `deltas` toutes les 16 ms à partir de `t0`. */
+function play(gesture: ReturnType<typeof createWheelGesture>, deltas: number[], t0 = 0) {
+  return deltas.map((d, i) => gesture.push(wheel(d, t0 + i * 16), 800))
+}
+
+describe('createWheelGesture', () => {
+  it('suit les doigts pixel par pixel, sans dépasser une page', () => {
+    const gesture = createWheelGesture()
+    const steps = play(gesture, [10, 20, 30])
+    expect(steps.map((s) => s.move)).toEqual([10, 20, 30])
+    expect(steps.at(-1)!.offset).toBe(60)
+    const big = play(gesture, Array(20).fill(100), 48)
+    expect(big.at(-1)!.offset).toBe(800)
+    expect(big.at(-1)!.move).toBe(0)
   })
 
-  it('accepte un nouveau geste après un silence', () => {
-    const pager = createWheelPager()
-    pager.push(wheel(-30, 0))
-    expect(pager.push(wheel(-30, 16)).side).toBe('left')
-    expect(pager.push(wheel(-30, 100)).side).toBeNull()
-    pager.push(wheel(-30, 400))
-    expect(pager.push(wheel(-30, 416)).side).toBe('left')
+  it('tourne la page après une distance suffisante', () => {
+    const gesture = createWheelGesture()
+    play(gesture, [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8])
+    expect(gesture.finish()).toEqual({ commit: 1, offset: 104 })
   })
 
-  it('ignore le défilement vertical et les petits mouvements', () => {
-    const pager = createWheelPager()
-    expect(pager.push(wheel(10, 0, 80))).toEqual({ side: null, horizontal: false })
-    expect(pager.push(wheel(20, 16))).toEqual({ side: null, horizontal: true })
+  it('tourne sur un geste court mais vif, dans les deux sens', () => {
+    const gesture = createWheelGesture()
+    play(gesture, [-25, -30])
+    expect(gesture.finish().commit).toBe(-1)
+    expect(wheelSide(-1)).toBe('left')
+    expect(wheelSide(1)).toBe('right')
   })
 
-  it('tient compte des deltas en lignes', () => {
-    const pager = createWheelPager()
-    expect(pager.push({ deltaX: 4, deltaY: 0, deltaMode: 1, timeStamp: 0 }).side).toBe('right')
+  it('revient à la page de départ sur un petit geste lent ou annulé', () => {
+    const gesture = createWheelGesture()
+    play(gesture, [2, 2, 2])
+    expect(gesture.finish()).toEqual({ commit: 0, offset: 6 })
+    play(gesture, [30, 30, 30, 30, -20, -20], 1000)
+    expect(gesture.finish().commit).toBe(0)
+  })
+
+  it('ignore un geste vertical et le pincement', () => {
+    const gesture = createWheelGesture()
+    expect(gesture.push(wheel(5, 0, 40), 800)).toEqual({ consume: false, move: 0, offset: 0 })
+    expect(gesture.push(wheel(40, 16), 800).consume).toBe(false)
+    expect(gesture.finish().commit).toBe(0)
+    expect(gesture.push({ ...wheel(40, 1000), ctrlKey: true }, 800).consume).toBe(false)
+  })
+
+  it('commence un nouveau geste après un silence', () => {
+    const gesture = createWheelGesture()
+    play(gesture, [50])
+    expect(gesture.push(wheel(10, 500), 800).offset).toBe(10)
   })
 })
