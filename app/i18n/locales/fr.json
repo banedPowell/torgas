@@ -25,7 +25,6 @@
     "count": "{n} œuvre | {n} œuvres",
     "import": "Importer",
     "importLabel": "Importer des œuvres",
-    "importSoon": "L'import par glisser-déposer arrive à la prochaine étape.",
     "search": {
       "label": "Rechercher dans la bibliothèque",
       "placeholder": "Titre, auteur, série"
@@ -268,5 +267,36 @@
   },
   "cover": {
     "alt": "Couverture de {title}"
+  },
+  "import": {
+    "title": "Import",
+    "files": "{n} fichier | {n} fichiers",
+    "drop": {
+      "title": "Dépose tes fichiers ici",
+      "description": "EPUB, CBZ · plusieurs fichiers à la fois",
+      "overlay": "Lâche pour importer dans ta bibliothèque",
+      "choose": "Choisir des fichiers"
+    },
+    "running": "Import en cours",
+    "counter": "{done} / {total}",
+    "progressLabel": "Progression de l'import de {name}",
+    "globalLabel": "Progression globale de l'import",
+    "cancel": "Annuler",
+    "clear": "Effacer la liste",
+    "toast": "{n} œuvre importée | {n} œuvres importées",
+    "state": {
+      "pending": "En attente",
+      "reading": "Lecture du fichier…",
+      "importing": "Analyse et copie…",
+      "imported": "Ajouté à ta bibliothèque",
+      "cancelled": "Annulé"
+    },
+    "alert": {
+      "duplicate": "Doublon : ce fichier est déjà dans ta bibliothèque. Ignoré.",
+      "drm": "Protégé par DRM : illisible. Torgas ne contourne pas les DRM ; récupère une version sans DRM auprès du vendeur.",
+      "unsupported": "Format non pris en charge : Torgas lit les EPUB et les CBZ.",
+      "error": "Import impossible : {message}"
+    },
+    "open": "Ouvrir {title}"
   }
 }

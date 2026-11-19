@@ -4,11 +4,18 @@
   "license": "AGPL-3.0-only",
   "packageManager": "pnpm@12.10.1",
   "scripts": {
+    "build:wasm": "wasm-pack build crates/torgas-wasm --target web --release",
+    "ensure:wasm": "test -f crates/torgas-wasm/pkg/torgas_wasm.js || pnpm build:wasm",
+    "predev": "pnpm build:wasm",
     "dev": "pnpm --filter app dev",
+    "prebuild": "pnpm ensure:wasm",
     "build": "pnpm --filter app build",
+    "pregenerate": "pnpm ensure:wasm",
     "generate": "pnpm --filter app generate",
+    "pretypecheck": "pnpm ensure:wasm",
     "typecheck": "pnpm --filter app typecheck",
     "lint": "pnpm --filter app lint",
+    "pretest": "pnpm ensure:wasm",
     "test": "pnpm --filter app test"
   }
 }

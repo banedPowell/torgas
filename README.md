@@ -25,8 +25,9 @@ Critère de sortie : lire un livre entier dessus sans friction. Voir [le plan du
 Prérequis : Node 22+, pnpm, Rust stable avec la cible `wasm32-unknown-unknown`, wasm-pack.
 
 ```bash
+pnpm build:wasm   # construit crates/torgas-wasm/pkg, dépendance de l'app (avant pnpm install)
 pnpm install
-pnpm dev          # app web sur http://localhost:3000
+pnpm dev          # reconstruit le wasm, puis app web sur http://localhost:3000
 pnpm tauri dev    # app desktop
 cargo test        # tests du cœur Rust
 ```
