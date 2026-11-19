@@ -69,6 +69,21 @@ export function bookFrame(page: Page): Frame | undefined {
 }
 
 /**
+ * Le texte est-il visible dans une section du livre ? En changeant de section, foliate remplace
+ * son iframe : une frame détachée entre deux sondages compte comme « pas encore ».
+ */
+export async function bookTextVisible(page: Page, text: string): Promise<boolean> {
+  for (const frame of page.frames().filter((f) => f.url().startsWith('blob:'))) {
+    try {
+      if (await frame.getByText(text, { exact: true }).isVisible()) return true
+    } catch {
+      // Frame détachée pendant le changement de section.
+    }
+  }
+  return false
+}
+
+/**
  * Position affichée par le lecteur EPUB : le curseur quand la barre est visible, sinon le
  * pourcentage discret en bas de page. `null` tant que la première position n'est pas connue.
  */

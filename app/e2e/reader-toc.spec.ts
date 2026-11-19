@@ -6,7 +6,7 @@ import {
   NOTES_EPUB_TITLE,
   makeNotesOnlyEpub,
 } from './fixtures'
-import { bookFrame, importFile, openFromLibrary, openLibrary, workCard } from './helpers'
+import { bookTextVisible, importFile, openFromLibrary, openLibrary, workCard } from './helpers'
 
 test.describe('EPUB : sommaire fait de notes seulement (#40)', () => {
   test('reconstruit le sommaire depuis le spine et range les notes à part', async ({ page }) => {
@@ -37,9 +37,7 @@ test.describe('EPUB : sommaire fait de notes seulement (#40)', () => {
 
     // Un chapitre mène à son intitulé, qui devient le chapitre courant (jamais « [n] »).
     await contents.getByRole('button', { name: 'II', exact: true }).click()
-    await expect
-      .poll(() => bookFrame(page)?.getByText('II', { exact: true }).isVisible())
-      .toBe(true)
+    await expect.poll(() => bookTextVisible(page, 'II')).toBe(true)
     // La barre se masque seule : on la rappelle d'un tap si besoin.
     const subtitle = page.getByText(`${EPUB_AUTHOR} · II`, { exact: true })
     await expect(async () => {
