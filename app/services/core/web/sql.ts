@@ -3,6 +3,7 @@
  * sémantiques). Toute évolution de `db.rs` se reporte ici.
  */
 import type { Bookmark, Locator, Series, Work } from '~/types/core'
+import { FINISHED_THRESHOLD } from '../status'
 import type { Row } from './protocol'
 
 export const WORK_SELECT = `
@@ -56,13 +57,13 @@ export const UPDATE_PROGRESS = `UPDATE library_entry SET
     progress = ?2,
     last_read_at = ?3,
     status = CASE
-      WHEN ?2 >= 1 THEN 'finished'
+      WHEN ?2 >= ${FINISHED_THRESHOLD} THEN 'finished'
       WHEN status = 'finished' THEN status
       WHEN ?2 > 0 THEN 'reading'
       ELSE status END,
     started_at = CASE WHEN ?2 > 0 THEN COALESCE(started_at, ?3) ELSE started_at END,
     finished_at = CASE
-      WHEN ?2 >= 1 AND status <> 'finished' THEN ?3 ELSE finished_at END
+      WHEN ?2 >= ${FINISHED_THRESHOLD} AND status <> 'finished' THEN ?3 ELSE finished_at END
   WHERE work_id = ?1`
 
 export const GET_LOCATOR = 'SELECT format, cfi, page, progress FROM locator WHERE work_id = ?'

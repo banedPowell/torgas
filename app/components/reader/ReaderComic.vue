@@ -8,6 +8,12 @@ const emit = defineEmits<{ close: [] }>()
 
 const reader = useComicReader(() => props.work)
 const settings = useComicSettings()
+// Session de lecture : s'ouvre quand les pages sont prêtes ; chaque changement de page compte.
+useReadingSession(() => props.work.id, {
+  ready: () => reader.state.value === 'ready',
+  progress: () => reader.progress.value,
+  activity: [reader.page, reader.ended],
+})
 const { t } = useI18n()
 const toast = useToast()
 

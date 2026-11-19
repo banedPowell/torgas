@@ -11,6 +11,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::CoreError;
 
+/// Progression à partir de laquelle une œuvre est « terminée » (le dernier écran
+/// d'un EPUB n'atteint pas toujours 1). Le pendant TypeScript est
+/// `FINISHED_THRESHOLD` dans `app/services/core/status.ts`.
+pub const FINISHED_THRESHOLD: f64 = 0.995;
+
 /// Déclare une énumération « chaîne » : sérialisation serde, `as_str`,
 /// `Display` et `FromStr` alignés sur les valeurs stockées en base.
 macro_rules! string_enum {

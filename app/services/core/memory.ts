@@ -9,6 +9,7 @@ import type {
   Series,
   Work,
 } from '~/types/core'
+import { statusAfterProgress } from './status'
 
 interface Session {
   id: string
@@ -124,6 +125,7 @@ export class MemoryBridge implements CoreBridge {
     const work = this.requireWork(id)
     this.locators.set(id, { ...locator })
     work.progress = locator.progress
+    work.status = statusAfterProgress(work.status, locator.progress)
     work.lastReadAt = new Date().toISOString()
   }
 
@@ -159,6 +161,11 @@ export class MemoryBridge implements CoreBridge {
     const session = this.sessions.get(sessionId)
     if (!session) throw new Error(`Session inconnue : ${sessionId}`)
     Object.assign(session, { endedAt: new Date().toISOString(), minutes, progress })
+  }
+
+  /** Sessions de lecture d'une œuvre (pour les tests : le contrat ne les expose pas). */
+  sessionsOf(workId: string): Session[] {
+    return [...this.sessions.values()].filter((s) => s.workId === workId).map((s) => ({ ...s }))
   }
 
   private requireWork(id: string): Work {
