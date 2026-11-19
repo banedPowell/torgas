@@ -22,6 +22,8 @@ const showContent = computed(() => state.value === 'ready' && !isEmpty.value)
 const importer = useImport()
 const { items: importItems, running: importing, current, progress, done, total } = importer
 const dropzone = useTemplateRef('dropzone')
+// Desktop : fichiers déposés sur la fenêtre ou ouverts par association.
+const { hovering } = useTauriFileDrop(importer.add)
 // Desktop : panneau latéral d'import ; mobile : bandeau puis résultats au-dessus de la grille.
 const isDesktop = useMediaQuery('(min-width: 1024px)')
 
@@ -150,6 +152,6 @@ function openPicker() {
       />
     </aside>
 
-    <ImportDropzone ref="dropzone" @files="importer.add" />
+    <ImportDropzone ref="dropzone" :hovering="hovering" @files="importer.add" />
   </div>
 </template>

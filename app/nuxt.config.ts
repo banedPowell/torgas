@@ -25,7 +25,12 @@ export default defineNuxtConfig({
     // Le worker SQLite importe wa-sqlite (wasm) : format ES pour le découpage en modules.
     worker: { format: 'es' },
     // Modules wasm chargés par `new URL(…, import.meta.url)` : pas de pré-bundling.
-    optimizeDeps: { exclude: ['@journeyapps/wa-sqlite', 'torgas-wasm'] },
+    // API Tauri (desktop, import() dynamique) pré-bundlée : pas de rechargement au premier
+    // lancement de `pnpm tauri dev`.
+    optimizeDeps: {
+      exclude: ['@journeyapps/wa-sqlite', 'torgas-wasm'],
+      include: ['@tauri-apps/api/core', '@tauri-apps/api/event', '@tauri-apps/api/webview'],
+    },
   },
 
   components: [{ path: '~/components', pathPrefix: false }],
