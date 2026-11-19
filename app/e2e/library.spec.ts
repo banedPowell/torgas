@@ -150,7 +150,7 @@ test.describe('CBZ : série en deux volumes', () => {
     // Le volume 1 est enregistré comme terminé avant le changement de volume ; retour sur la fiche.
     await page.getByRole('button', { name: 'Fermer le lecteur' }).click()
     await expect(page).toHaveURL(/\/works\//)
-    await expect(page.getByRole('link', { name: 'Volume 1 · Terminé' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Volume 1 · CBZ · Terminé' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Lire le volume 2' })).toBeVisible()
   })
 })

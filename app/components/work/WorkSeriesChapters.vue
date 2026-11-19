@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SeriesChapterRow } from '~/types/work'
-import type { ChapterGap } from '~/utils/seriesChapters'
+import type { ChapterFilter, ChapterGap, ChapterOrder } from '~/utils/seriesChapters'
 import type { Rect, Virtualizer } from '@tanstack/vue-virtual'
 import { observeElementRect, useVirtualizer } from '@tanstack/vue-virtual'
 
@@ -10,8 +10,10 @@ import { observeElementRect, useVirtualizer } from '@tanstack/vue-virtual'
  */
 const props = defineProps<{
   rows: readonly SeriesChapterRow[]
-  /** Chapitres affichés (après recherche). */
+  /** Chapitres affichés (après recherche et filtre). */
   shown: number
+  /** Chapitres de la série. */
+  total: number
   /** Chapitre mis en avant : le prochain à lire. */
   nextId?: string
   gaps: readonly ChapterGap[]
@@ -21,6 +23,8 @@ const props = defineProps<{
 }>()
 
 const query = defineModel<string>('query', { default: '' })
+const order = defineModel<ChapterOrder>('order', { default: 'asc' })
+const filter = defineModel<ChapterFilter>('filter', { default: 'all' })
 
 const GROUP_HEIGHT = 40
 const ROW_HEIGHT = 60
@@ -28,6 +32,23 @@ const ROW_HEIGHT = 60
 const GAPS_LISTED = 4
 
 const { t } = useI18n()
+/** Un chapitre importé seul se passe de recherche, de tri et de filtre. */
+const searchable = computed(() => props.total > 1)
+const filterItems = computed(() =>
+  (['all', 'unread', 'current', 'read'] as const).map((value) => ({
+    value,
+    label: t(`work.seriesChapters.filter.${value}`),
+  })),
+)
+const orderLabel = computed(() =>
+  t(order.value === 'asc' ? 'work.seriesChapters.order.asc' : 'work.seriesChapters.order.desc'),
+)
+/** Rien à afficher : recherche ou filtre trop restrictifs. */
+const emptyLabel = computed(() =>
+  query.value
+    ? t('work.seriesChapters.noResults', { query: query.value })
+    : t('work.seriesChapters.noneFiltered'),
+)
 const virtualized = computed(() => props.rows.length > VIRTUAL_LIST_THRESHOLD)
 const height = (row?: SeriesChapterRow) => (row?.kind === 'group' ? GROUP_HEIGHT : ROW_HEIGHT)
 
@@ -128,37 +149,58 @@ const incomplete = computed(() => {
       {{ $t('work.seriesChapters.title') }}
     </h2>
 
-    <UInput
-      v-model="query"
-      type="search"
-      icon="i-lucide-search"
-      size="lg"
-      :placeholder="$t('work.seriesChapters.searchPlaceholder')"
-      :aria-label="$t('work.seriesChapters.searchLabel')"
-      class="w-full"
-      :ui="{
-        base: '[&::-webkit-search-cancel-button]:appearance-none',
-        trailing: 'pe-1',
-      }"
-    >
-      <template v-if="query" #trailing>
+    <div v-if="searchable" class="flex flex-wrap items-center gap-2">
+      <UInput
+        v-model="query"
+        type="search"
+        icon="i-lucide-search"
+        size="lg"
+        :placeholder="$t('work.seriesChapters.searchPlaceholder')"
+        :aria-label="$t('work.seriesChapters.searchLabel')"
+        class="min-w-0 flex-1 basis-56"
+        :ui="{
+          base: '[&::-webkit-search-cancel-button]:appearance-none',
+          trailing: 'pe-1',
+        }"
+      >
+        <template v-if="query" #trailing>
+          <UButton
+            icon="i-lucide-x"
+            color="neutral"
+            variant="link"
+            size="sm"
+            class="size-9 justify-center"
+            :aria-label="$t('work.seriesChapters.clear')"
+            @click="query = ''"
+          />
+        </template>
+      </UInput>
+      <USelect
+        v-model="filter"
+        :items="filterItems"
+        icon="i-lucide-list-filter"
+        size="lg"
+        :aria-label="$t('work.seriesChapters.filter.label')"
+        class="w-40"
+      />
+      <UTooltip :text="orderLabel">
         <UButton
-          icon="i-lucide-x"
+          :icon="order === 'asc' ? 'i-lucide-arrow-down-0-1' : 'i-lucide-arrow-down-1-0'"
           color="neutral"
-          variant="link"
-          size="sm"
-          class="size-9 justify-center"
-          :aria-label="$t('work.seriesChapters.clear')"
-          @click="query = ''"
+          variant="outline"
+          size="lg"
+          :aria-label="orderLabel"
+          class="size-10 justify-center"
+          @click="order = order === 'asc' ? 'desc' : 'asc'"
         />
-      </template>
-    </UInput>
-    <p v-if="query" class="sr-only" role="status">
+      </UTooltip>
+    </div>
+    <p v-if="query || filter !== 'all'" class="sr-only" role="status">
       {{ $t('work.seriesChapters.results', { n: shown }, shown) }}
     </p>
 
-    <p v-if="query && shown === 0" class="py-6 text-center text-sm text-muted">
-      {{ $t('work.seriesChapters.noResults', { query }) }}
+    <p v-if="shown === 0" class="py-6 text-center text-sm text-muted">
+      {{ emptyLabel }}
     </p>
 
     <ol
@@ -179,7 +221,7 @@ const incomplete = computed(() => {
     </ol>
 
     <UAlert
-      v-if="missingCount > 0 && !query"
+      v-if="missingCount > 0 && !query && filter === 'all'"
       color="neutral"
       variant="subtle"
       icon="i-lucide-triangle-alert"

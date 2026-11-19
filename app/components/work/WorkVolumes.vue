@@ -62,7 +62,7 @@ const incomplete = computed(() =>
         <NuxtLink
           v-else
           :to="`/read/${row.work.id}`"
-          :aria-label="`${volumeLabel(row)} · ${state(row.work)}`"
+          :aria-label="`${volumeLabel(row)} · ${$t(`format.${row.work.format}`)} · ${state(row.work)}`"
           :class="[
             'flex min-h-16 items-center gap-3.5 rounded-md px-2 py-2.5 text-highlighted hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary',
             row.work.id === nextId ? 'my-1 bg-elevated ring-1 ring-primary ring-inset' : '',
@@ -86,7 +86,10 @@ const incomplete = computed(() =>
             >
               {{ $t('work.volumes.next') }}
             </span>
-            <span class="truncate text-[15px] font-semibold">{{ volumeLabel(row) }}</span>
+            <span class="flex min-w-0 items-center gap-2">
+              <span class="truncate text-[15px] font-semibold">{{ volumeLabel(row) }}</span>
+              <WorkFormatBadge :format="row.work.format" />
+            </span>
             <span class="truncate text-xs text-muted">
               {{ state(row.work) }} · {{ formatBytes(row.work.sizeBytes) }}
             </span>

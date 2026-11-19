@@ -109,6 +109,12 @@ pub async fn get_book_bytes(state: DesktopState<'_>, id: String) -> Result<Respo
     blocking(&state, move |d| d.book_bytes(&id).map(Response::new)).await
 }
 
+/// Nombre de pages d'une œuvre lue page par page (CBZ, manga EPUB fait d'images).
+#[tauri::command]
+pub async fn get_page_count(state: DesktopState<'_>, id: String) -> Result<usize> {
+    blocking(&state, move |d| d.page_count(&id)).await
+}
+
 /// Dernière position de lecture.
 #[tauri::command]
 pub async fn get_locator(state: DesktopState<'_>, id: String) -> Result<Option<Locator>> {

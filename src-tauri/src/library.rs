@@ -220,6 +220,13 @@ impl Desktop {
             .ok_or_else(|| DesktopError::MissingFile(id.to_owned()))
     }
 
+    /// Nombre de pages lisibles une à une (CBZ, ou manga EPUB fait d'images ; 0 sinon).
+    pub fn page_count(&self, work_id: &str) -> Result<usize> {
+        let archive = self.archive(work_id)?;
+        let archive = archive.lock()?;
+        Ok(archive.page_count())
+    }
+
     /// Page `index` (à partir de 0) du CBZ d'une œuvre. Les archives sont
     /// gardées ouvertes dans un cache LRU.
     pub fn page(&self, work_id: &str, index: usize) -> Result<Page> {

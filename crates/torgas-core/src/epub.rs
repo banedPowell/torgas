@@ -399,6 +399,65 @@ fn cover_item(elements: &[Element]) -> Option<(String, String)> {
     Some((href.to_owned(), mime.to_owned()))
 }
 
+/// Pages d'un EPUB manga, dans l'ordre du spine : l'image de chaque section (section image,
+/// ou première `img` / `image` SVG de son corps). Les sections sans image (crédits, texte)
+/// sont sautées. Liste vide si les sections d'une image ne sont pas majoritaires : le livre
+/// se lit alors comme un livre, pas comme des planches.
+pub(crate) fn comic_page_paths<B: AsRef<[u8]>>(archive: &mut MemArchive<B>) -> Result<Vec<String>> {
+    let opf_path = opf_path(archive)?;
+    let opf = zipread::read_text(archive, &opf_path)?
+        .ok_or_else(|| CoreError::InvalidEpub(format!("OPF introuvable : {opf_path}")))?;
+    let elements = xml::parse(&opf_path, &opf)?;
+    let items: Vec<&Element> = elements
+        .iter()
+        .filter(|e| e.name == "item" && e.is_inside("manifest"))
+        .collect();
+    let sections: Vec<(String, String)> = elements
+        .iter()
+        .filter(|e| e.name == "itemref" && e.is_inside("spine"))
+        .filter_map(|itemref| {
+            let id = itemref.attr("idref")?;
+            let item = items.iter().find(|item| item.attr("id") == Some(id))?;
+            let href = item.attr("href")?;
+            let mime = item.attr("media-type").unwrap_or_default().to_owned();
+            Some((resolve_href(&opf_path, href), mime))
+        })
+        .collect();
+    let mut pages = Vec::new();
+    for (path, mime) in &sections {
+        if mime.starts_with("image/") {
+            pages.push(path.clone());
+            continue;
+        }
+        let Ok(Some(xhtml)) = zipread::read_text(archive, path) else {
+            continue;
+        };
+        if is_image_page(path, &xhtml)
+            && let Some(src) = section_image(path, &xhtml)
+        {
+            pages.push(resolve_href(path, &src));
+        }
+    }
+    if pages.len() * 2 <= sections.len() {
+        pages.clear();
+    }
+    Ok(pages)
+}
+
+/// Source de la première image du corps d'une section (`img src`, `image xlink:href`).
+fn section_image(path: &str, xhtml: &str) -> Option<String> {
+    let elements = xml::parse(path, xhtml).ok()?;
+    elements
+        .iter()
+        .filter(|e| e.is_inside("body"))
+        .find_map(|e| match e.name.as_str() {
+            "img" => e.attr("src"),
+            "image" => e.attr("href"),
+            _ => None,
+        })
+        .map(str::to_owned)
+}
+
 /// Résout `href` (relatif à l'OPF) en chemin d'archive : retire fragment et
 /// requête, décode les `%XX` et normalise `.`/`..`.
 fn resolve_href(opf_path: &str, href: &str) -> String {
@@ -447,6 +506,32 @@ fn percent_decode(input: &str) -> String {
 mod tests {
     use super::*;
     use crate::fixtures;
+
+    #[test]
+    fn comic_pages_follow_the_spine() {
+        let bytes = fixtures::epub_comic("<dc:title>Saga</dc:title>", "", true);
+        let mut archive = zipread::open(bytes.as_slice()).unwrap();
+        let pages = comic_page_paths(&mut archive).unwrap();
+        assert_eq!(
+            pages,
+            [
+                "OEBPS/images/p1.jpg",
+                "OEBPS/images/p2.jpg",
+                "OEBPS/images/p3.jpg",
+                "OEBPS/images/p4.jpg"
+            ]
+        );
+    }
+
+    #[test]
+    fn text_book_has_no_comic_pages() {
+        let bytes = fixtures::epub_kindle_manga();
+        let mut archive = zipread::open(bytes.as_slice()).unwrap();
+        assert_eq!(
+            comic_page_paths(&mut archive).unwrap(),
+            Vec::<String>::new()
+        );
+    }
 
     #[test]
     fn epub2_metadata() {

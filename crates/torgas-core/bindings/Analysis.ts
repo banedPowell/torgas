@@ -58,7 +58,7 @@ chapterTitle?: string,
  */
 direction?: ReadingDirection, 
 /**
- * Nombre de pages (CBZ uniquement).
+ * Nombre de pages : CBZ, ou manga EPUB fait de pages-images (lu comme un CBZ).
  */
 pageCount?: number, 
 /**

@@ -140,6 +140,40 @@ describe('buildSeriesChapterRows', () => {
     expect(buildSeriesChapterRows([chapter(10)], '99')).toEqual([])
   })
 
+  it('inverse l’ordre : volumes et chapitres du dernier au premier, trous compris', () => {
+    const rows = buildSeriesChapterRows(
+      [chapter(1, { volume: 1 }), chapter(2, { volume: 1 }), chapter(4, { volume: 2 }), chapter(7)],
+      '',
+      { order: 'desc' },
+    )
+    expect(describeRows(rows)).toEqual([
+      '[-:1]',
+      '7',
+      '?5-6',
+      '[2:1]',
+      '4',
+      '?3-3',
+      '[1:2]',
+      '2',
+      '1',
+    ])
+  })
+
+  it('ne garde qu’un état de lecture, sans les trous', () => {
+    const works = [
+      chapter(1, { status: 'finished', progress: 1 }),
+      chapter(2, { progress: 0.4, status: 'reading' }),
+      chapter(3),
+      chapter(5),
+    ]
+    expect(describeRows(buildSeriesChapterRows(works, '', { filter: 'unread' }))).toEqual([
+      '3',
+      '5',
+    ])
+    expect(describeRows(buildSeriesChapterRows(works, '', { filter: 'current' }))).toEqual(['2'])
+    expect(describeRows(buildSeriesChapterRows(works, '', { filter: 'read' }))).toEqual(['1'])
+  })
+
   it('reste rapide avec plusieurs milliers de chapitres', () => {
     const many = Array.from({ length: 3000 }, (_, i) =>
       chapter(i + 1, { volume: i < 2900 ? Math.floor(i / 10) + 1 : undefined }),

@@ -7,7 +7,6 @@ import {
   deriveSeriesStatus,
   describeTarget,
   formatVolumeNumbers,
-  isEpubComic,
   missingVolumes,
   nextVolume,
   readAction,
@@ -204,14 +203,6 @@ describe('formats de la fiche', () => {
     expect(formatDate('pas une date')).toBe('')
     expect(formatLanguage('fr')).toBe('français')
     expect(formatLanguage('en')).toBe('anglais')
-  })
-})
-
-describe('isEpubComic', () => {
-  it('repère les mangas au format EPUB', () => {
-    expect(isEpubComic({ format: 'epub', kind: 'comic' })).toBe(true)
-    expect(isEpubComic({ format: 'epub', kind: 'novel' })).toBe(false)
-    expect(isEpubComic({ format: 'cbz', kind: 'comic' })).toBe(false)
   })
 })
 

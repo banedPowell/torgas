@@ -65,7 +65,7 @@ const gapLabel = computed(() => {
   <NuxtLink
     v-else
     :to="`/read/${row.work.id}`"
-    :aria-label="`${$t('work.seriesChapters.number', { n: formatIssueNumber(row.number) })}${row.title ? ` · ${row.title}` : ''} · ${detail}`"
+    :aria-label="`${$t('work.seriesChapters.number', { n: formatIssueNumber(row.number) })}${row.title ? ` · ${row.title}` : ''} · ${$t(`format.${row.work.format}`)} · ${detail}`"
     :class="[
       'flex h-full items-center gap-3 rounded-md px-2 focus-visible:outline-2 focus-visible:outline-primary',
       row.state === 'read' ? 'text-muted' : 'text-highlighted',
@@ -79,11 +79,14 @@ const gapLabel = computed(() => {
       <span v-if="next" class="font-mono text-[11px] tracking-wider text-primary uppercase">
         {{ $t('work.seriesChapters.next') }}
       </span>
-      <span
-        class="truncate text-[15px]"
-        :class="row.state === 'current' || next ? 'font-semibold' : ''"
-      >
-        {{ label }}
+      <span class="flex min-w-0 items-center gap-2">
+        <span
+          class="truncate text-[15px]"
+          :class="row.state === 'current' || next ? 'font-semibold' : ''"
+        >
+          {{ label }}
+        </span>
+        <WorkFormatBadge :format="row.work.format" />
       </span>
       <span v-if="!next" class="truncate text-xs text-muted">{{ detail }}</span>
     </span>

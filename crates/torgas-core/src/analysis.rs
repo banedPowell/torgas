@@ -46,7 +46,7 @@ pub struct Analysis {
     /// `Manga` de `ComicInfo.xml`). Appliqué à la série quand elle est créée.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub direction: Option<ReadingDirection>,
-    /// Nombre de pages (CBZ uniquement).
+    /// Nombre de pages : CBZ, ou manga EPUB fait de pages-images (lu comme un CBZ).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub page_count: Option<u32>,
     /// Le fichier est protégé par une DRM (EPUB) : il ne pourra pas être lu.
@@ -98,6 +98,15 @@ pub fn analyze(name: &str, bytes: &[u8]) -> Result<Analysis> {
         } else {
             WorkKind::Novel
         };
+        // Manga fait d'images : ses pages se lisent comme celles d'un CBZ.
+        let page_count = if meta.comic {
+            epub::comic_page_paths(&mut archive)
+                .ok()
+                .map(|pages| u32::try_from(pages.len()).unwrap_or(u32::MAX))
+                .filter(|&n| n > 0)
+        } else {
+            None
+        };
         return Ok(Analysis {
             format: Format::Epub,
             kind,
@@ -111,7 +120,7 @@ pub fn analyze(name: &str, bytes: &[u8]) -> Result<Analysis> {
             chapter: placement.chapter,
             chapter_title: placement.chapter_title,
             direction: (meta.comic && meta.rtl).then_some(ReadingDirection::Rtl),
-            page_count: None,
+            page_count,
             drm: meta.drm,
             cover: meta.cover,
         });
@@ -329,6 +338,8 @@ mod tests {
         assert_eq!(analysis.series_title.as_deref(), Some("One Piece"));
         assert_eq!(analysis.volume, Some(2.0));
         assert_eq!(analysis.direction, Some(ReadingDirection::Rtl));
+        // Fait de pages-images : il se lit page par page, comme un CBZ.
+        assert_eq!(analysis.page_count, Some(4));
     }
 
     #[test]
@@ -346,6 +357,11 @@ mod tests {
         );
         assert_eq!(analysis.chapter, Some(139.0));
         assert_eq!(analysis.direction, None);
+        assert_eq!(analysis.page_count, Some(4));
+        // Un manga Kindle sans pages-images reconnaissables reste lu comme un livre.
+        let kindle = analyze("op.epub", &fixtures::epub_kindle_manga()).unwrap();
+        assert_eq!(kindle.kind, WorkKind::Comic);
+        assert_eq!(kindle.page_count, None);
     }
 
     #[test]

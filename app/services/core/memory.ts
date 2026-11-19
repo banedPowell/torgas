@@ -128,6 +128,11 @@ export class MemoryBridge implements CoreBridge {
     return bytes
   }
 
+  async getPageCount(id: string): Promise<number> {
+    const work = this.requireWork(id)
+    return this.pages.get(id)?.length ?? work.pageCount ?? 0
+  }
+
   async getPageUrl(id: string, page: number): Promise<string> {
     this.requireWork(id)
     const url = this.pages.get(id)?.[page]

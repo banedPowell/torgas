@@ -27,6 +27,7 @@ async function mount(works: Work[], query = '') {
     props: {
       rows,
       shown: rows.filter((r) => r.kind === 'chapter').length,
+      total: works.length,
       nextId: 'c1501',
       gaps,
       missingCount: countMissing(gaps),

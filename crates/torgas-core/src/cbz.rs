@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::comicinfo::{self, COMIC_INFO, ComicInfo};
+use crate::epub;
 use crate::error::{CoreError, Result};
 use crate::sort::natural_cmp;
 use crate::zipread::{self, MemArchive};
@@ -64,7 +65,8 @@ struct PageEntry {
     mime: &'static str,
 }
 
-/// Archive CBZ ouverte en mémoire, avec ses pages indexées et triées.
+/// Archive CBZ ouverte en mémoire, avec ses pages indexées et triées. Un manga en EPUB
+/// s'ouvre aussi : ses pages sont les images de ses sections, dans l'ordre de lecture.
 ///
 /// Les pages sont les images (jpg, jpeg, png, webp, gif, avif) de l'archive,
 /// dossiers compris, triées par [`natural_cmp`] sur leur chemin complet.
@@ -83,7 +85,10 @@ impl<B: AsRef<[u8]>> CbzArchive<B> {
     /// Une archive sans aucune image est acceptée (`page_count() == 0`) : c'est
     /// à l'appelant de décider s'il s'agit d'une erreur.
     pub fn open(bytes: B) -> Result<Self> {
-        let archive = zipread::open(bytes)?;
+        let mut archive = zipread::open(bytes)?;
+        if epub::is_epub(&mut archive)? {
+            return Self::open_epub(archive);
+        }
         let mut pages = Vec::new();
         let mut comic_info: Option<(usize, bool)> = None;
         for index in 0..archive.len() {
@@ -115,6 +120,24 @@ impl<B: AsRef<[u8]>> CbzArchive<B> {
             archive,
             pages,
             comic_info: comic_info.map(|(index, _)| index),
+        })
+    }
+
+    /// Manga en EPUB : une page par section-image, dans l'ordre du spine (voir
+    /// [`epub::comic_page_paths`]). Aucune page si le livre n'est pas fait d'images.
+    fn open_epub(mut archive: MemArchive<B>) -> Result<Self> {
+        let pages = epub::comic_page_paths(&mut archive)?
+            .into_iter()
+            .filter_map(|name| {
+                let index = archive.index_for_name(&name)?;
+                let mime = image_mime(&name)?;
+                Some(PageEntry { name, index, mime })
+            })
+            .collect();
+        Ok(Self {
+            archive,
+            pages,
+            comic_info: None,
         })
     }
 
@@ -154,6 +177,14 @@ impl<B: AsRef<[u8]>> CbzArchive<B> {
 mod tests {
     use super::*;
     use crate::fixtures;
+
+    #[test]
+    fn opens_an_epub_manga_page_by_page() {
+        let bytes = fixtures::epub_comic("<dc:title>Saga</dc:title>", "", true);
+        let mut archive = CbzArchive::open(bytes).unwrap();
+        assert_eq!(archive.page_count(), 4);
+        assert_eq!(archive.page(0).unwrap().mime, "image/jpeg");
+    }
 
     #[test]
     fn indexes_and_sorts_pages_naturally() {
