@@ -142,3 +142,19 @@ export function pickResume(works: readonly Work[]): Work | undefined {
     .filter((w) => w.lastReadAt && w.status !== 'finished' && w.progress < 1)
     .sort((a, b) => compareRecentFirst(a.lastReadAt, b.lastReadAt))[0]
 }
+
+/** Œuvre dont la barre « Reprendre » a été fermée, avec sa date de dernière lecture à ce moment. */
+export interface DismissedResume {
+  id: string
+  lastReadAt: string | null
+}
+
+/** Reprise à afficher : masquée tant que c'est la même œuvre, non relue depuis la fermeture. */
+export function visibleResume(
+  resume: Work | undefined,
+  dismissed: DismissedResume | null,
+): Work | undefined {
+  if (!resume || !dismissed) return resume
+  const same = resume.id === dismissed.id && (resume.lastReadAt ?? null) === dismissed.lastReadAt
+  return same ? undefined : resume
+}

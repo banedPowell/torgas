@@ -2,7 +2,7 @@
 import type { NavigationMenuItem } from '@nuxt/ui'
 
 const { t } = useI18n()
-const { counts, resume, ensureLoaded } = useLibrary()
+const { counts, resume, ensureLoaded, dismissResume } = useLibrary()
 
 onMounted(ensureLoaded)
 
@@ -56,7 +56,7 @@ const items = computed<NavigationMenuItem[]>(() => [
       <slot />
 
       <div v-if="resume" class="shrink-0 px-2 pb-2 lg:px-6 lg:pb-4">
-        <ResumeBar :work="resume" class="lg:mx-auto lg:max-w-xl" />
+        <ResumeBar :work="resume" class="lg:mx-auto lg:max-w-xl" @dismiss="dismissResume" />
       </div>
 
       <nav

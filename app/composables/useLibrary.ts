@@ -6,7 +6,37 @@ import type {
   LibraryView,
   StatusFilter,
 } from '~/types/library'
-import { buildLibrary, countByStatus, pickResume, VIRTUAL_LIST_THRESHOLD } from '~/utils/library'
+import {
+  buildLibrary,
+  countByStatus,
+  pickResume,
+  visibleResume,
+  VIRTUAL_LIST_THRESHOLD,
+  type DismissedResume,
+} from '~/utils/library'
+
+const DISMISSED_KEY = 'torgas:resume-dismissed'
+
+function readDismissed(): DismissedResume | null {
+  try {
+    const raw = localStorage.getItem(DISMISSED_KEY)
+    const value = raw ? (JSON.parse(raw) as Partial<DismissedResume>) : null
+    return value && typeof value.id === 'string'
+      ? { id: value.id, lastReadAt: value.lastReadAt ?? null }
+      : null
+  } catch {
+    return null
+  }
+}
+
+function writeDismissed(value: DismissedResume | null) {
+  try {
+    if (value) localStorage.setItem(DISMISSED_KEY, JSON.stringify(value))
+    else localStorage.removeItem(DISMISSED_KEY)
+  } catch {
+    // Stockage indisponible (navigation privée…) : la fermeture ne dure que la session.
+  }
+}
 
 export type LoadState = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -29,7 +59,10 @@ export function useLibrary() {
 
   const entries = computed(() => buildLibrary(works.value, series.value, filters.value, sort.value))
   const counts = computed(() => countByStatus(works.value))
-  const resume = computed(() => pickResume(works.value))
+  const dismissedResume = useState<DismissedResume | null>('library:resumeDismissed', readDismissed)
+  const latestResume = computed(() => pickResume(works.value))
+  /** Reprise proposée ; réapparaît quand une autre œuvre est lue ou que celle-ci est relue. */
+  const resume = computed(() => visibleResume(latestResume.value, dismissedResume.value))
   const isEmpty = computed(() => state.value === 'ready' && works.value.length === 0)
   const hasActiveFilters = computed(
     () =>
@@ -56,6 +89,13 @@ export function useLibrary() {
   /** Charge la bibliothèque si ce n'est pas déjà fait. */
   async function ensureLoaded(): Promise<void> {
     if (state.value === 'idle' || state.value === 'error') await load()
+  }
+
+  function dismissResume() {
+    const current = latestResume.value
+    if (!current) return
+    dismissedResume.value = { id: current.id, lastReadAt: current.lastReadAt ?? null }
+    writeDismissed(dismissedResume.value)
   }
 
   function setQuery(query: string) {
@@ -93,6 +133,7 @@ export function useLibrary() {
     virtualized,
     load,
     ensureLoaded,
+    dismissResume,
     setQuery,
     setFormat,
     setStatus,

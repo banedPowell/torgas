@@ -13,6 +13,7 @@ describe('useLibrary', () => {
   beforeEach(() => {
     bridge.current = new MemoryBridge({ works: sampleWorks, series: sampleSeries })
     clearNuxtState()
+    localStorage.clear()
   })
 
   it('charge les œuvres et regroupe les séries', async () => {
@@ -51,6 +52,49 @@ describe('useLibrary', () => {
     useLibrary().setView('list')
     expect(useLibrary().view.value).toBe('list')
     expect(useLibrary().works.value).toHaveLength(5)
+  })
+
+  it("ferme la barre Reprendre, la mémorise et la rouvre si l'œuvre est relue", async () => {
+    const library = useLibrary()
+    await library.load()
+    expect(library.resume.value?.id).toBe('bovary')
+
+    library.dismissResume()
+    expect(library.resume.value).toBeUndefined()
+
+    // Après rechargement de la page : l'état persisté masque toujours la même reprise.
+    clearNuxtState()
+    const reloaded = useLibrary()
+    await reloaded.load()
+    expect(reloaded.resume.value).toBeUndefined()
+
+    // Relue après la fermeture : la barre réapparaît.
+    const [bovary, ...others] = sampleWorks
+    bridge.current = new MemoryBridge({
+      works: [{ ...bovary!, lastReadAt: '2026-04-01T00:00:00.000Z' }, ...others],
+      series: sampleSeries,
+    })
+    const reread = useLibrary()
+    await reread.load()
+    expect(reread.resume.value?.id).toBe('bovary')
+  })
+
+  it('rouvre la barre quand une autre œuvre devient la reprise', async () => {
+    const library = useLibrary()
+    await library.load()
+    library.dismissResume()
+    const [bovary, horla, ...others] = sampleWorks
+    bridge.current = new MemoryBridge({
+      works: [
+        bovary!,
+        { ...horla!, status: 'reading', progress: 0.2, lastReadAt: '2026-05-01T00:00:00.000Z' },
+        ...others,
+      ],
+      series: sampleSeries,
+    })
+    const next = useLibrary()
+    await next.load()
+    expect(next.resume.value?.id).toBe('horla')
   })
 
   it('signale une bibliothèque vide', async () => {
