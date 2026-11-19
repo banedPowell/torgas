@@ -57,7 +57,10 @@ function openPicker() {
           <h1 class="me-auto font-display text-3xl font-medium text-highlighted">
             {{ $t('library.title') }}
           </h1>
-          <div v-if="isDesktop && showContent" class="order-last flex w-full items-center gap-3">
+          <div
+            v-if="isDesktop && showContent"
+            class="order-last flex w-full min-w-0 flex-wrap items-center gap-3"
+          >
             <LibrarySearch
               :query="filters.query"
               class="max-w-72 min-w-48 flex-1"

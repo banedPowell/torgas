@@ -48,7 +48,7 @@ const selectUi = computed(() => ({
 <template>
   <div
     class="flex items-center gap-1"
-    :class="desktop ? 'lg:gap-3' : 'justify-between'"
+    :class="desktop ? 'flex-wrap justify-end lg:gap-3' : 'justify-between'"
     role="group"
     :aria-label="$t('library.options')"
   >
