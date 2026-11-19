@@ -17,12 +17,13 @@ const emit = defineEmits<{ close: []; confirm: [] }>()
 
 const { t } = useI18n()
 const confirming = ref(false)
+const seriesItems = useSeriesItems()
 
 const titles = computed(() =>
   props.entries.map((e) =>
     e.kind === 'work'
       ? e.work.title
-      : t('deletion.seriesItem', { title: e.series.title, n: e.works.length }),
+      : t('deletion.seriesItem', { title: e.series.title, items: seriesItems.short(e.works) }),
   ),
 )
 const description = computed(() =>

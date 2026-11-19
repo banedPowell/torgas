@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SeriesChapterRow } from '~/types/work'
 import type { ChapterGap } from '~/utils/seriesChapters'
+import type { Rect, Virtualizer } from '@tanstack/vue-virtual'
+import { observeElementRect, useVirtualizer } from '@tanstack/vue-virtual'
 
 /**
  * Chapitres d'une série (fiche, vue « Chapitres ») : recherche, liste regroupée par volume et
@@ -27,26 +29,80 @@ const GAPS_LISTED = 4
 
 const { t } = useI18n()
 const virtualized = computed(() => props.rows.length > VIRTUAL_LIST_THRESHOLD)
-const source = computed(() => (virtualized.value ? props.rows : []))
 const height = (row?: SeriesChapterRow) => (row?.kind === 'group' ? GROUP_HEIGHT : ROW_HEIGHT)
-const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(source, {
-  itemHeight: (index) => height(source.value[index]),
-  overscan: 12,
-})
-const visible = computed(() =>
-  virtualized.value ? list.value.map((item) => item.data) : props.rows,
-)
 
-/** Liste longue : on l'ouvre sur le prochain chapitre ; une recherche remonte en haut. */
-function scrollToNext() {
-  if (!virtualized.value || query.value) return
-  const index = props.rows.findIndex(
-    (row) => row.kind === 'chapter' && row.work.id === props.nextId,
-  )
-  if (index > 2) scrollTo(index - 2)
+// Liste longue : virtualisée dans le défilement de la page (pas de cadre qui défile à part).
+// `scrollMargin` situe le haut de la liste dans le conteneur qui défile.
+const listEl = useTemplateRef<HTMLElement>('list')
+const scroller = shallowRef<HTMLElement | null>(null)
+const scrollMargin = ref(0)
+
+function scrollParent(el: HTMLElement | null): HTMLElement {
+  for (let node = el?.parentElement; node; node = node.parentElement) {
+    const { overflowY } = getComputedStyle(node)
+    if (overflowY === 'auto' || overflowY === 'scroll') return node
+  }
+  return document.documentElement
 }
-onMounted(() => nextTick(scrollToNext))
-watch(query, () => virtualized.value && nextTick(() => scrollTo(0)))
+
+function measure() {
+  const el = listEl.value
+  if (!el || !scroller.value) return
+  const top =
+    el.getBoundingClientRect().top -
+    scroller.value.getBoundingClientRect().top +
+    scroller.value.scrollTop
+  if (Math.abs(top - scrollMargin.value) > 0.5) scrollMargin.value = top
+}
+
+watch(
+  [virtualized, listEl],
+  ([on, el]) => {
+    scroller.value = on && el ? scrollParent(el) : null
+    measure()
+  },
+  { flush: 'post' },
+)
+// Ce qui précède la liste (en-tête, recherche, alerte) peut changer de hauteur.
+useEventListener(scroller, 'scroll', measure, { passive: true })
+useResizeObserver(scroller, measure)
+
+const virtualizer = useVirtualizer(
+  computed(() => {
+    const el = scroller.value
+    return {
+      count: virtualized.value ? props.rows.length : 0,
+      getScrollElement: () => el,
+      estimateSize: (index: number) => height(props.rows[index]),
+      overscan: 12,
+      scrollMargin: scrollMargin.value,
+      // Conteneur pas encore mesuré (ou sans mise en page, dans les tests) : hauteur de l'écran.
+      observeElementRect: (instance: Virtualizer<HTMLElement, Element>, cb: (rect: Rect) => void) =>
+        observeElementRect(instance, (rect) =>
+          cb(rect.height > 0 ? rect : { width: rect.width, height: window.innerHeight }),
+        ),
+    }
+  }),
+)
+const visible = computed(() => {
+  if (!virtualized.value) return props.rows
+  return virtualizer.value
+    .getVirtualItems()
+    .map((item) => props.rows[item.index])
+    .filter((row): row is SeriesChapterRow => !!row)
+})
+/** Espace des lignes non rendues, au-dessus et au-dessous de la fenêtre. */
+const padding = computed(() => {
+  if (!virtualized.value) return {}
+  const items = virtualizer.value.getVirtualItems()
+  const total = virtualizer.value.getTotalSize()
+  const first = items[0]
+  const last = items.at(-1)
+  return {
+    paddingTop: `${first ? first.start - scrollMargin.value : 0}px`,
+    paddingBottom: `${last ? total - (last.end - scrollMargin.value) : total}px`,
+  }
+})
 
 const incomplete = computed(() => {
   const parts = props.gaps.map((gap) =>
@@ -105,29 +161,22 @@ const incomplete = computed(() => {
       {{ $t('work.seriesChapters.noResults', { query }) }}
     </p>
 
-    <div
+    <ol
       v-else
-      v-bind="virtualized ? containerProps : {}"
-      :class="virtualized ? 'h-[min(70vh,44rem)] overscroll-contain border-y border-default' : ''"
+      ref="list"
+      :aria-label="$t('work.seriesChapters.title')"
+      :style="padding"
+      class="border-y border-default"
     >
-      <ol
-        v-bind="virtualized ? wrapperProps : {}"
-        :aria-label="$t('work.seriesChapters.title')"
-        :class="virtualized ? '' : 'border-y border-default'"
+      <li
+        v-for="row in visible"
+        :key="row.key"
+        :style="{ height: `${height(row)}px` }"
+        :class="row.kind === 'group' ? '' : 'border-b border-default last:border-b-0'"
       >
-        <li
-          v-for="row in visible"
-          :key="row.key"
-          :style="{ height: `${height(row)}px` }"
-          :class="row.kind === 'group' ? '' : 'border-b border-default last:border-b-0'"
-        >
-          <WorkSeriesChapterRow
-            :row="row"
-            :next="row.kind === 'chapter' && row.work.id === nextId"
-          />
-        </li>
-      </ol>
-    </div>
+        <WorkSeriesChapterRow :row="row" :next="row.kind === 'chapter' && row.work.id === nextId" />
+      </li>
+    </ol>
 
     <UAlert
       v-if="missingCount > 0 && !query"

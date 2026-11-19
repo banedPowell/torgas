@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import type { Work } from '~/types/core'
 
-defineProps<{ work: Work }>()
+const props = defineProps<{ work: Work }>()
 const emit = defineEmits<{ dismiss: [] }>()
+
+// Un chapitre ou un volume se présente par sa série (« One Piece · ch. 1201 »), pas par le nom
+// brut de son fichier.
+const { series } = useLibrary()
+const workLabel = useWorkLabel()
+const title = computed(() =>
+  workLabel(
+    props.work,
+    series.value.find((s) => s.id === props.work.seriesId),
+  ),
+)
 </script>
 
 <template>
@@ -12,12 +23,12 @@ const emit = defineEmits<{ dismiss: [] }>()
   >
     <NuxtLink
       :to="`/works/${work.id}`"
-      :aria-label="$t('resume.open', { title: work.title })"
+      :aria-label="$t('resume.open', { title })"
       class="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
     >
-      <CoverImage :src="work.coverUrl" :title="work.title" class="h-[50px] w-9 shrink-0" />
+      <CoverImage :src="work.coverUrl" :title="title" class="h-[50px] w-9 shrink-0" />
       <div class="flex min-w-0 flex-1 flex-col gap-1">
-        <span class="truncate text-sm font-semibold">{{ work.title }}</span>
+        <span class="truncate text-sm font-semibold">{{ title }}</span>
         <div class="flex items-center gap-2">
           <UProgress
             :model-value="Math.round(work.progress * 100)"
@@ -31,13 +42,13 @@ const emit = defineEmits<{ dismiss: [] }>()
         </div>
       </div>
     </NuxtLink>
-    <UTooltip :text="$t('resume.action', { title: work.title })">
+    <UTooltip :text="$t('resume.action', { title })">
       <UButton
         :to="`/read/${work.id}`"
         icon="i-lucide-play"
         color="neutral"
         variant="solid"
-        :aria-label="$t('resume.action', { title: work.title })"
+        :aria-label="$t('resume.action', { title })"
         class="size-11 shrink-0 justify-center rounded-full bg-default text-highlighted hover:bg-muted"
       />
     </UTooltip>

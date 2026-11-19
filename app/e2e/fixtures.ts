@@ -203,10 +203,12 @@ export function makePng(rgb: [number, number, number], width = 64, height = 96):
 /**
  * CBZ de 6 pages PNG (`page-01.png`…), chacune d'une couleur distincte. `tint` décale les
  * couleurs : deux CBZ de même nom de série mais de contenu différent (le doublon se détecte
- * par empreinte).
+ * par empreinte). `salt` ajoute un fichier texte (ignoré à la lecture) pour rendre l'archive
+ * unique sans toucher aux pages.
  */
-export function makeCbz(name = `${CBZ_TITLE}.cbz`, tint = 0): Fixture {
+export function makeCbz(name = `${CBZ_TITLE}.cbz`, tint = 0, salt?: number): Fixture {
   const files: Zippable = {}
+  if (salt !== undefined) files['notes.txt'] = strToU8(String(salt))
   for (let i = 0; i < CBZ_PAGES; i++) {
     const shade = 40 + i * 35 + tint
     const png = makePng([shade, 255 - shade, (shade * 3) % 256])
