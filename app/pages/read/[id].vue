@@ -6,6 +6,9 @@ const router = useRouter()
 const id = computed(() => String(route.params.id))
 const { work, state, error, load } = useReaderWork(id)
 
+// Ouverture à un chapitre précis depuis la fiche (`?at=<cible foliate>`), une seule fois.
+const startAt = computed(() => (typeof route.query.at === 'string' ? route.query.at : undefined))
+
 function close() {
   if (window.history.state?.back) router.back()
   else router.push(`/works/${id.value}`)
@@ -48,6 +51,7 @@ defineShortcuts(computed(() => (work.value ? {} : { escape: close })))
     v-else-if="work.format === 'epub'"
     :key="work.id"
     :work-id="work.id"
+    :start-at="startAt"
     @close="close"
   />
   <LazyReaderComic v-else-if="work.format === 'cbz'" :key="work.id" :work="work" @close="close" />

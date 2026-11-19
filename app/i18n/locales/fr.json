@@ -137,7 +137,8 @@
       "reread": "Relire",
       "readVolume": "Lire le volume {volume}",
       "resumeVolume": "Reprendre le volume {volume} à {percent}",
-      "rereadVolume": "Relire le volume {volume}"
+      "rereadVolume": "Relire le volume {volume}",
+      "resumeChapter": "Reprendre à « {chapter} »"
     },
     "volumes": {
       "title": "Volumes",
@@ -149,6 +150,13 @@
       "gap": "Volume {list} manquant | Volumes {list} manquants",
       "missingFile": "Fichier manquant",
       "incomplete": "Série incomplète : volume {list} manquant | Série incomplète : volumes {list} manquants"
+    },
+    "chapters": {
+      "title": "Chapitres",
+      "count": "Chapitres · {n}",
+      "label": "Chapitres",
+      "loading": "Lecture des chapitres",
+      "read": "Lu"
     }
   },
   "deletion": {

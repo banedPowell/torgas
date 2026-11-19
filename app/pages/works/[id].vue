@@ -30,6 +30,7 @@ useHead({
   title: () => (meta.value ? `${meta.value.title} · ${t('app.name')}` : t('app.name')),
 })
 
+const chapters = useWorkChapters(work)
 const loading = computed(() => state.value === 'idle' || state.value === 'loading')
 const showDirection = computed(() => series.value && meta.value?.kind === 'comic')
 
@@ -156,9 +157,17 @@ async function confirmDelete() {
             :work-id="readTarget.id"
             :action="action"
             :volume="series ? readTarget.volume : undefined"
+            :chapter="series ? undefined : chapters.current.value?.label"
           />
           <WorkProgress :progress="progress" :summary="summary" />
           <WorkVolumes v-if="series" :rows="rows" :next-id="next?.id" :missing="missing" />
+          <WorkChapters
+            v-else-if="work && chapters.state.value !== 'none' && chapters.state.value !== 'idle'"
+            :work-id="work.id"
+            :rows="chapters.rows.value"
+            :count="chapters.count.value"
+            :loading="chapters.state.value === 'loading'"
+          />
           <WorkDetails :meta="meta" class="lg:hidden" />
         </div>
       </div>
