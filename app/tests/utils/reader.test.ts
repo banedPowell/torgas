@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   buildBookCss,
   DEFAULT_READER_SETTINGS,
-  flattenToc,
   readerKeyAction,
   readerTapAction,
   sanitizeReaderSettings,
@@ -69,20 +68,5 @@ describe('actions du lecteur', () => {
     expect(tapZone(0.95, 0.24)).toBe('menu')
     expect(tapZone(0.95, 0.25)).toBe('right')
     expect(readerTapAction(0.1, 0)).toBe('toggle')
-  })
-})
-
-describe('flattenToc', () => {
-  it('aplatit le sommaire avec la profondeur', () => {
-    expect(
-      flattenToc([
-        { label: ' Partie I ', href: 'p1.xhtml', subitems: [{ label: 'I', href: 'c1.xhtml' }] },
-        { label: 'Sans lien', subitems: [{ label: 'II', href: 'c2.xhtml' }] },
-      ]),
-    ).toEqual([
-      { label: 'Partie I', href: 'p1.xhtml', depth: 0 },
-      { label: 'I', href: 'c1.xhtml', depth: 1 },
-      { label: 'II', href: 'c2.xhtml', depth: 1 },
-    ])
   })
 })

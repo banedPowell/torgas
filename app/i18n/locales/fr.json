@@ -248,7 +248,11 @@
       "empty": "Ce livre n'a pas de sommaire.",
       "noBookmarks": "Aucun marque-page pour l'instant.",
       "noBookmarksHint": "Ajoute-en un avec l'icône en haut de l'écran.",
-      "remove": "Retirer le marque-page « {label} »"
+      "remove": "Retirer le marque-page « {label} »",
+      "notes": "Notes",
+      "notesCount": "Notes · {n}",
+      "section": "Section {n}",
+      "building": "Lecture du sommaire"
     },
     "settings": {
       "title": "Réglages de lecture",

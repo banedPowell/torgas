@@ -18,7 +18,7 @@ const view = shallowRef<View | null>(null)
 const opening = ref(true)
 const tocOpen = ref(false)
 const settingsOpen = ref(false)
-const toc = computed(() => flattenToc(view.value?.book.toc))
+const toc = useEpubToc()
 const footnotes = useFootnotePreview({ view: () => view.value, bounds: () => root.value })
 const rootSize = reactive(useElementSize(root))
 
@@ -34,7 +34,10 @@ useHead({ style: [{ key: 'reader-fonts', textContent: fontFaces }] })
 
 watch([tocOpen, settingsOpen], ([a, b]) => chrome.setPinned(a || b))
 onMounted(reader.load)
-onBeforeUnmount(() => view.value?.close())
+onBeforeUnmount(() => {
+  toc.cancel()
+  view.value?.close()
+})
 
 watch([() => reader.state.value, container], async ([state, el]) => {
   if (state !== 'ready' || !el || view.value) return
@@ -53,6 +56,7 @@ watch([() => reader.state.value, container], async ([state, el]) => {
     container.value?.append(el)
     await el.open(reader.file.value!)
     view.value = el
+    void toc.load(el.book)
     applyStyles()
     await el.init({ lastLocation: reader.initialCfi.value }).catch(() => el.init({}))
   } catch (e) {
@@ -62,16 +66,22 @@ watch([() => reader.state.value, container], async ([state, el]) => {
   }
 })
 
+// Chapitre courant pris dans le sommaire normalisé (jamais une note comme « [3] ») ; il se
+// précise quand le sommaire reconstruit depuis le spine arrive.
+let lastDetail: FoliateRelocateDetail | null = null
 function onRelocate(d: FoliateRelocateDetail) {
+  lastDetail = d
+  const entry = toc.locate(d, view.value?.getSectionFractions() ?? [])
   reader.relocate({
     cfi: d.cfi,
     progress: d.fraction ?? 0,
-    chapter: d.tocItem?.label?.trim() || undefined,
-    chapterHref: d.tocItem?.href,
+    chapter: entry?.label,
+    chapterHref: entry?.href,
     pageLabel: d.pageItem?.label,
     chapterMinutesLeft: d.time?.section,
   })
 }
+watch(toc.entries, () => lastDetail && onRelocate(lastDetail))
 
 // Le livre est rendu dans des iframes : on y relaie les taps et le clavier.
 function onSectionLoad(doc: Document) {
@@ -201,7 +211,9 @@ const failure = computed(() => {
 
       <ReaderToc
         v-model:open="tocOpen"
-        :entries="toc"
+        :entries="toc.entries.value"
+        :notes="toc.notes.value"
+        :building="toc.building.value"
         :current-href="reader.position.value?.chapterHref"
         :bookmarks="reader.bookmarks.value"
         @navigate="goTo"

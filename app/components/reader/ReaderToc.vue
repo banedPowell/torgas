@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import type { TabsItem } from '@nuxt/ui'
+import type { AccordionItem, TabsItem } from '@nuxt/ui'
 import type { Bookmark } from '~/types/core'
 import type { ReaderTocEntry } from '~/types/reader'
 
-defineProps<{
-  entries: ReaderTocEntry[]
+const props = defineProps<{
+  entries: readonly ReaderTocEntry[]
+  /** Appels de notes séparés du sommaire (« [1] »…), repliés en fin de liste. */
+  notes: readonly ReaderTocEntry[]
+  /** Sommaire en cours de reconstruction depuis le spine. */
+  building?: boolean
   currentHref?: string
   bookmarks: readonly Bookmark[]
 }>()
@@ -21,6 +25,13 @@ const { t } = useI18n()
 const tabs = computed<TabsItem[]>(() => [
   { label: t('reader.toc.contents'), icon: 'i-lucide-list', slot: 'contents' as const },
   { label: t('reader.toc.bookmarks'), icon: 'i-lucide-bookmark', slot: 'bookmarks' as const },
+])
+const notesGroup = computed<AccordionItem[]>(() => [
+  {
+    label: t('reader.toc.notesCount', { n: props.notes.length }),
+    icon: 'i-lucide-asterisk',
+    slot: 'notes' as const,
+  },
 ])
 </script>
 
@@ -39,27 +50,38 @@ const tabs = computed<TabsItem[]>(() => [
         :ui="{ list: 'px-4', content: 'px-2 pb-6' }"
       >
         <template #contents>
-          <p v-if="!entries.length" class="px-3 py-6 text-sm text-muted">
+          <div
+            v-if="building && !entries.length"
+            role="status"
+            :aria-label="$t('reader.toc.building')"
+            class="flex flex-col gap-3 px-3 py-4"
+          >
+            <USkeleton v-for="n in 6" :key="n" class="h-4" :class="n % 2 ? 'w-3/4' : 'w-1/2'" />
+          </div>
+          <p v-else-if="!entries.length && !notes.length" class="px-3 py-6 text-sm text-muted">
             {{ $t('reader.toc.empty') }}
           </p>
-          <nav v-else :aria-label="$t('reader.toc.contents')">
-            <ul class="flex flex-col">
-              <li v-for="entry in entries" :key="entry.href">
-                <button
-                  type="button"
-                  class="flex min-h-11 w-full items-center rounded-md px-3 py-2 text-start text-sm hover:bg-elevated focus-visible:outline-2 focus-visible:outline-primary"
-                  :class="
-                    entry.href === currentHref ? 'font-semibold text-primary' : 'text-default'
-                  "
-                  :style="{ paddingInlineStart: `${0.75 + entry.depth}rem` }"
-                  :aria-current="entry.href === currentHref ? 'location' : undefined"
-                  @click="emit('navigate', entry.href)"
-                >
-                  {{ entry.label }}
-                </button>
-              </li>
-            </ul>
-          </nav>
+          <ReaderTocList
+            v-if="entries.length"
+            :entries="entries"
+            :current-href="currentHref"
+            :label="$t('reader.toc.contents')"
+            @navigate="(href) => emit('navigate', href)"
+          />
+          <UAccordion
+            v-if="notes.length"
+            :items="notesGroup"
+            class="mt-2 border-t border-default"
+            :ui="{ trigger: 'min-h-11 px-3 text-sm text-muted', body: 'pb-2' }"
+          >
+            <template #notes-body>
+              <ReaderTocList
+                :entries="notes"
+                :label="$t('reader.toc.notes')"
+                @navigate="(href) => emit('navigate', href)"
+              />
+            </template>
+          </UAccordion>
         </template>
         <template #bookmarks>
           <div v-if="!bookmarks.length" class="px-3 py-6 text-sm text-muted">

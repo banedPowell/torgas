@@ -96,6 +96,85 @@ ${EPUB_CHAPTERS.map((title, i) => `<li><a href="c${i + 1}.xhtml">${title}</a></l
   }
 }
 
+export const NOTES_EPUB_TITLE = 'Le Carnet annoté'
+export const NOTES_EPUB_CHAPTERS = ['I', 'II', 'III']
+export const NOTES_EPUB_NOTES = 3
+
+/** Page XHTML façon conversion Word → Calibre : `<title>` identique partout, aucun h1-h6. */
+function wordXhtml(body: string): string {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>I</title></head>
+<body><div><p> </p><p> </p>
+${body}
+</div></body>
+</html>`
+}
+
+/**
+ * EPUB 2 dont le sommaire (NCX) ne contient que les appels de notes (`[1]` → `notes.htm#_ftn1`),
+ * comme certaines conversions Calibre : chapitres sans titre h1-h6, chaque intitulé (« I ») seul
+ * dans son fichier avant celui du texte, page de titre en tête, notes à la fin.
+ */
+export function makeNotesOnlyEpub(): Fixture {
+  const sections: [string, string][] = [
+    ['title.htm', `<p>${EPUB_AUTHOR}</p><p>${NOTES_EPUB_TITLE}</p><p>Éditions de test</p>`],
+  ]
+  NOTES_EPUB_CHAPTERS.forEach((label, chapter) => {
+    const call = `<a href="notes.htm#_ftn${chapter + 1}" id="_ftnref${chapter + 1}">[${chapter + 1}]</a>`
+    const text = Array.from({ length: 40 }, (_, i) => paragraph(chapter, i)).join('\n')
+    sections.push([`h${chapter + 1}.htm`, `<p>${label}</p>`])
+    sections.push([`t${chapter + 1}.htm`, text.replace('</p>', `${call}</p>`)])
+  })
+  const notes = Array.from(
+    { length: NOTES_EPUB_NOTES },
+    (_, i) =>
+      `<p id="_ftn${i + 1}"><a href="t${i + 1}.htm#_ftnref${i + 1}">[${i + 1}]</a> ${SENTENCE}</p>`,
+  )
+  sections.push(['notes.htm', notes.join('\n')])
+
+  const files: Zippable = {
+    mimetype: [strToU8('application/epub+zip'), { level: 0 }],
+    'META-INF/container.xml': strToU8(`<?xml version="1.0"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles><rootfile full-path="content.opf" media-type="application/oebps-package+xml"/></rootfiles>
+</container>`),
+    'content.opf': strToU8(`<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="uid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="uid">urn:uuid:9a7c2f3e-1b4d-4e8a-a0c5-6d2b8f1e7c40</dc:identifier>
+    <dc:title>${NOTES_EPUB_TITLE}</dc:title>
+    <dc:creator>${EPUB_AUTHOR}</dc:creator>
+    <dc:language>fr</dc:language>
+  </metadata>
+  <manifest>
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+${sections.map(([href], i) => `    <item id="s${i}" href="${href}" media-type="application/xhtml+xml"/>`).join('\n')}
+  </manifest>
+  <spine toc="ncx">${sections.map((_, i) => `<itemref idref="s${i}"/>`).join('')}</spine>
+</package>`),
+    'toc.ncx': strToU8(`<?xml version="1.0" encoding="utf-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head><meta name="dtb:uid" content="urn:uuid:9a7c2f3e-1b4d-4e8a-a0c5-6d2b8f1e7c40"/></head>
+  <docTitle><text>${NOTES_EPUB_TITLE}</text></docTitle>
+  <navMap>
+${Array.from(
+  { length: NOTES_EPUB_NOTES },
+  (_, i) => `    <navPoint id="n${i + 1}" playOrder="${i + 1}">
+      <navLabel><text>[${i + 1}]</text></navLabel><content src="notes.htm#_ftn${i + 1}"/>
+    </navPoint>`,
+).join('\n')}
+  </navMap>
+</ncx>`),
+  }
+  for (const [href, body] of sections) files[href] = strToU8(wordXhtml(body))
+  return {
+    name: 'carnet-annote.epub',
+    mimeType: 'application/epub+zip',
+    buffer: Buffer.from(zipSync(files)),
+  }
+}
+
 function pngChunk(type: string, data: Buffer): Buffer {
   const body = Buffer.concat([Buffer.from(type, 'ascii'), data])
   const length = Buffer.alloc(4)
