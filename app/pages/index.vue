@@ -37,7 +37,9 @@ function openPicker() {
     <UDashboardPanel
       id="library"
       class="min-h-0 flex-1"
-      :ui="{ body: 'gap-3 sm:gap-4 lg:gap-5 lg:px-7' }"
+      :ui="{
+        body: 'gap-3 sm:gap-4 lg:gap-5 lg:px-7 pb-[calc(var(--resume-space,0px)+1rem)] sm:pb-[calc(var(--resume-space,0px)+1.5rem)]',
+      }"
     >
       <template #header>
         <header
