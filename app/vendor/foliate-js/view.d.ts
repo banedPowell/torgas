@@ -55,6 +55,14 @@ export interface FoliateRelocateDetail {
 }
 
 export interface FoliateRenderer extends HTMLElement {
+  /** Largeur d'une page (px) en mode paginé. */
+  size: number
+  /** Mode défilement continu (pas de pages). */
+  scrolled?: boolean
+  /** Fait glisser le texte, borné à une page de part et d'autre (comme au doigt). */
+  scrollBy(dx: number, dy: number): void
+  /** Aimante sur une page ; `v` (en pages) décale la cible depuis la position actuelle. */
+  snap(vx: number, vy: number): void
   setStyles?(css: string | [string, string]): void
   next(): Promise<void>
   prev(): Promise<void>

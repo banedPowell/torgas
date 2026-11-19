@@ -13,6 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const router = useRouter()
+const reducedMotion = usePreferredReducedMotion()
 const reader = useReader(() => props.workId)
 const { settings, resolvedTheme, update, reset } = useReaderSettings()
 const chrome = useReaderChrome()
@@ -60,6 +61,9 @@ watch([() => reader.state.value, container], async ([state, el]) => {
     footnotes.attach(el)
     container.value?.append(el)
     await el.open(reader.file.value!)
+    // Pages qui glissent (tour de page, fin d'un geste au trackpad) plutôt que de sauter, sauf si
+    // le système demande de réduire les animations.
+    if (reducedMotion.value !== 'reduce') el.renderer.setAttribute('animated', '')
     view.value = el
     void toc.load(el.book)
     applyStyles()
@@ -96,9 +100,40 @@ function onRelocate(d: FoliateRelocateDetail) {
 watch(toc.entries, () => lastDetail && onRelocate(lastDetail))
 
 // Le livre est rendu dans des iframes : on y relaie les taps et le clavier.
+// Glissement à deux doigts au trackpad, façon Livres d'Apple : le texte suit les doigts (via le
+// paginateur de foliate, comme au toucher), puis s'aimante sur la page voisine ou revient.
+// Les événements horizontaux sont interceptés : le navigateur n'y voit pas « page précédente ».
+const wheelGesture = useWheelGesture(({ commit, offset }) => {
+  const renderer = view.value?.renderer
+  if (!renderer?.size) return
+  // Décalage restant (en pages) pour atteindre la page visée depuis la position actuelle.
+  const shift = (commit * renderer.size - offset) / renderer.size
+  renderer.snap(shift, shift)
+})
+
+function onWheel(e: WheelEvent) {
+  const renderer = view.value?.renderer
+  if (!renderer || renderer.scrolled || !renderer.size) return
+  const { consume, move } = wheelGesture.push(
+    {
+      deltaX: e.deltaX,
+      deltaY: e.deltaY,
+      deltaMode: e.deltaMode,
+      ctrlKey: e.ctrlKey,
+      // Horloge de la page principale : celle des iframes de sections diffère d'une section à l'autre.
+      timeStamp: performance.now(),
+    },
+    renderer.size,
+  )
+  if (!consume) return
+  e.preventDefault()
+  if (move) renderer.scrollBy(move, move)
+}
+
 function onSectionLoad(doc: Document) {
   session.listen(doc)
   doc.addEventListener('keydown', onKey)
+  doc.addEventListener('wheel', onWheel, { passive: false })
   doc.addEventListener('click', (e) => {
     const target = e.target as Element | null
     if (e.defaultPrevented || target?.closest?.('a') || !doc.getSelection()?.isCollapsed) return
@@ -194,6 +229,7 @@ const failure = computed(() => {
         :aria-label="$t('reader.text')"
         role="document"
         @click="(e: MouseEvent) => onTap(e.clientX, e.clientY)"
+        @wheel="onWheel"
       />
       <ReaderSkeleton v-if="opening" class="absolute inset-0 bg-default" />
       <ReaderFootnote
