@@ -32,7 +32,13 @@ const showDirection = computed(() => series.value && meta.value?.kind === 'comic
 </script>
 
 <template>
-  <UDashboardPanel id="work" class="min-h-0 flex-1">
+  <UDashboardPanel
+    id="work"
+    class="min-h-0 flex-1"
+    :ui="{
+      body: 'pb-[calc(var(--resume-space,0px)+1rem)] sm:pb-[calc(var(--resume-space,0px)+1.5rem)]',
+    }"
+  >
     <template #header>
       <div class="px-2 pt-3 pb-1 sm:px-4 lg:px-6 lg:pt-4">
         <UButton
