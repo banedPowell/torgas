@@ -60,8 +60,6 @@ test.describe('Fiche : liste des chapitres (#43)', () => {
 
     await chapters.getByRole('link', { name: /^\d+\sII$/ }).click()
     await expect(page).toHaveURL(/\/read\//)
-    await expect
-      .poll(() => bookFrame(page)?.getByText('II', { exact: true }).isVisible())
-      .toBe(true)
+    await expect.poll(() => bookTextVisible(page, 'II')).toBe(true)
   })
 })
