@@ -7,7 +7,7 @@ defineProps<{ work: Work }>()
 <template>
   <aside
     :aria-label="$t('resume.label')"
-    class="flex items-center gap-3 rounded-2xl bg-inverted py-2 ps-2.5 pe-2 text-inverted"
+    class="flex items-center gap-3 rounded-[14px] bg-inverted py-2 ps-2.5 pe-2 text-inverted"
   >
     <CoverImage :src="work.coverUrl" :title="work.title" class="h-[50px] w-9 shrink-0" />
     <div class="flex min-w-0 flex-1 flex-col gap-1">

@@ -85,7 +85,7 @@ const imgClass = {
       <USkeleton class="absolute inset-0 rounded-none" />
       <UIcon
         name="i-lucide-loader-circle"
-        class="relative size-8 animate-spin text-muted motion-reduce:animate-none"
+        class="relative size-9 animate-spin text-muted motion-reduce:animate-none"
         aria-hidden="true"
       />
       <span class="relative text-sm text-muted">

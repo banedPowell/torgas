@@ -56,6 +56,7 @@ const slider = computed({
         v-model="slider"
         :min="1"
         :max="Math.max(pageCount, 1)"
+        size="lg"
         :inverted="direction === 'rtl'"
         :aria-label="$t('reader.comic.pageSlider')"
         class="flex-1"

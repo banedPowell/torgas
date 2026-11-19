@@ -20,7 +20,7 @@ const kicker = computed(() =>
 <template>
   <section
     aria-labelledby="comic-end-title"
-    class="mx-auto flex w-full max-w-md flex-col justify-center gap-5 rounded-xl bg-muted p-7 text-default"
+    class="mx-auto flex w-full max-w-md flex-col justify-center gap-5 rounded-lg bg-muted p-7 text-default"
   >
     <span class="font-mono text-xs tracking-[0.06em] text-muted uppercase">{{ kicker }}</span>
     <h2
@@ -36,7 +36,7 @@ const kicker = computed(() =>
     </h2>
 
     <template v-if="nextVolume">
-      <div class="flex items-center gap-3.5 rounded-xl bg-elevated p-3.5">
+      <div class="flex items-center gap-3.5 rounded-lg bg-elevated p-3.5">
         <span
           aria-hidden="true"
           class="flex h-16 w-11 shrink-0 items-center justify-center rounded bg-inverted font-display text-xl text-inverted"
@@ -60,7 +60,7 @@ const kicker = computed(() =>
         replace
         size="xl"
         block
-        class="h-13 rounded-xl text-base"
+        class="h-13 rounded-lg text-base"
         :label="$t('reader.comic.end.nextVolume')"
       />
     </template>

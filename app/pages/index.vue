@@ -34,22 +34,43 @@ function openPicker() {
 
 <template>
   <div class="flex min-h-0 min-w-0 flex-1">
-    <UDashboardPanel id="library" class="min-h-0 flex-1" :ui="{ body: 'gap-4 sm:gap-5 lg:px-7' }">
+    <UDashboardPanel
+      id="library"
+      class="min-h-0 flex-1"
+      :ui="{ body: 'gap-3 sm:gap-4 lg:gap-5 lg:px-7' }"
+    >
       <template #header>
         <header
-          class="flex items-center justify-between gap-3 px-4 pt-5 pb-1 sm:px-6 lg:px-7 lg:pt-6"
+          class="flex flex-wrap items-center gap-x-3 gap-y-3 px-5 pt-5 pb-2 lg:px-7 lg:pt-6 lg:pb-0"
         >
-          <h1 class="font-display text-3xl font-medium text-highlighted">
+          <h1 class="me-auto font-display text-3xl font-medium text-highlighted">
             {{ $t('library.title') }}
           </h1>
+          <div v-if="isDesktop && showContent" class="order-last flex w-full items-center gap-3">
+            <LibrarySearch
+              :query="filters.query"
+              class="max-w-72 min-w-48 flex-1"
+              @update:query="library.setQuery"
+            />
+            <LibraryOptions
+              desktop
+              class="ms-auto"
+              :format="filters.format"
+              :sort="sort"
+              :view="view"
+              @update:format="library.setFormat"
+              @update:sort="library.setSort"
+              @update:view="library.setView"
+            />
+          </div>
           <UButton
             icon="i-lucide-plus"
             size="lg"
             :aria-label="$t('library.importLabel')"
-            class="size-11 justify-center rounded-full lg:w-auto lg:rounded-md lg:px-4"
+            class="size-11 justify-center rounded-full lg:h-10 lg:w-auto lg:rounded-[10px] lg:px-4"
             @click="openPicker"
           >
-            <span class="hidden lg:inline">{{ $t('library.import') }}</span>
+            <span class="hidden font-semibold lg:inline">{{ $t('library.import') }}</span>
           </UButton>
         </header>
       </template>
@@ -73,24 +94,34 @@ function openPicker() {
           />
         </template>
 
-        <LibraryFilters
-          v-if="showContent"
-          :filters="filters"
-          :sort="sort"
-          :view="view"
-          :counts="counts"
-          @update:query="library.setQuery"
-          @update:format="library.setFormat"
-          @update:status="library.setStatus"
-          @update:sort="library.setSort"
-          @update:view="library.setView"
-        />
+        <template v-if="showContent">
+          <LibrarySearch
+            v-if="!isDesktop"
+            :query="filters.query"
+            @update:query="library.setQuery"
+          />
+          <LibraryStatus
+            :status="filters.status"
+            :counts="counts"
+            :desktop="isDesktop"
+            @update:status="library.setStatus"
+          />
+          <LibraryOptions
+            v-if="!isDesktop"
+            :format="filters.format"
+            :sort="sort"
+            :view="view"
+            @update:format="library.setFormat"
+            @update:sort="library.setSort"
+            @update:view="library.setView"
+          />
+        </template>
 
         <div
           v-if="state === 'idle' || state === 'loading'"
           role="status"
           :aria-label="$t('library.loading')"
-          class="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(132px,1fr))] sm:gap-x-4"
+          class="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(132px,1fr))] sm:gap-x-[18px]"
         >
           <div v-for="n in 6" :key="n" class="flex flex-col gap-2">
             <USkeleton class="aspect-[2/3] w-full rounded-sm" />
@@ -140,7 +171,7 @@ function openPicker() {
     </UDashboardPanel>
 
     <aside
-      v-if="isDesktop && importItems.length"
+      v-if="isDesktop"
       class="w-[340px] shrink-0 overflow-y-auto border-s border-default bg-muted px-5 py-6"
     >
       <ImportQueue
