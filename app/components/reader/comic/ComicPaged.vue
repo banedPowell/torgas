@@ -30,6 +30,27 @@ function onClick(event: MouseEvent) {
   else emit('prev')
 }
 
+// Glissement horizontal à deux doigts (trackpad) : une planche par geste.
+const wheelPager = createWheelPager()
+useEventListener(
+  stage,
+  'wheel',
+  (e: WheelEvent) => {
+    const { side, horizontal } = wheelPager.push({
+      deltaX: e.deltaX,
+      deltaY: e.deltaY,
+      deltaMode: e.deltaMode,
+      timeStamp: e.timeStamp,
+    })
+    // Planche agrandie qui défile en largeur : le geste sert à la parcourir.
+    const el = stage.value
+    if (!horizontal || (el && el.scrollWidth > el.clientWidth + 1)) return
+    e.preventDefault()
+    if (side) emit('side', side)
+  },
+  { passive: false },
+)
+
 useSwipe(stage, {
   threshold: 50,
   onSwipeEnd(_, swipe) {

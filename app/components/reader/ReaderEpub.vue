@@ -96,9 +96,25 @@ function onRelocate(d: FoliateRelocateDetail) {
 watch(toc.entries, () => lastDetail && onRelocate(lastDetail))
 
 // Le livre est rendu dans des iframes : on y relaie les taps et le clavier.
+// Glissement horizontal à deux doigts (trackpad) : une page par geste. Les événements
+// horizontaux sont interceptés pour que le navigateur ne les prenne pas pour « page précédente ».
+const wheelPager = createWheelPager()
+function onWheel(e: WheelEvent) {
+  const { side, horizontal } = wheelPager.push({
+    deltaX: e.deltaX,
+    deltaY: e.deltaY,
+    deltaMode: e.deltaMode,
+    // Horloge de la page principale : celle des iframes de sections diffère d'une section à l'autre.
+    timeStamp: performance.now(),
+  })
+  if (horizontal) e.preventDefault()
+  if (side) run(side)
+}
+
 function onSectionLoad(doc: Document) {
   session.listen(doc)
   doc.addEventListener('keydown', onKey)
+  doc.addEventListener('wheel', onWheel, { passive: false })
   doc.addEventListener('click', (e) => {
     const target = e.target as Element | null
     if (e.defaultPrevented || target?.closest?.('a') || !doc.getSelection()?.isCollapsed) return
@@ -194,6 +210,7 @@ const failure = computed(() => {
         :aria-label="$t('reader.text')"
         role="document"
         @click="(e: MouseEvent) => onTap(e.clientX, e.clientY)"
+        @wheel="onWheel"
       />
       <ReaderSkeleton v-if="opening" class="absolute inset-0 bg-default" />
       <ReaderFootnote

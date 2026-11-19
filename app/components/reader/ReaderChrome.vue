@@ -63,11 +63,18 @@ const emit = defineEmits<{
     </div>
   </Transition>
 
-  <div
-    v-if="!visible && position"
-    class="pointer-events-none absolute inset-x-0 bottom-[max(1.125rem,env(safe-area-inset-bottom))] text-center font-mono text-[11px] text-muted"
-    aria-hidden="true"
+  <!-- Le pourcentage seul n'apparaît qu'une fois la barre effacée (sans chevauchement), et
+       disparaît aussitôt quand elle revient. -->
+  <Transition
+    enter-active-class="transition-opacity duration-150 delay-200"
+    enter-from-class="opacity-0"
   >
-    {{ formatPercent(position.progress) }}
-  </div>
+    <div
+      v-if="!visible && position"
+      class="pointer-events-none absolute inset-x-0 bottom-[max(1.125rem,env(safe-area-inset-bottom))] text-center font-mono text-[11px] text-muted"
+      aria-hidden="true"
+    >
+      {{ formatPercent(position.progress) }}
+    </div>
+  </Transition>
 </template>
