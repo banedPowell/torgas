@@ -10,6 +10,24 @@ export interface FoliateBook {
   metadata?: { title?: unknown; author?: unknown; language?: string | string[] }
   toc?: FoliateTocItem[]
   dir?: 'ltr' | 'rtl'
+  sections: FoliateSection[]
+  /** Section (index dans le spine) d'un lien interne résolu, ou `null`. */
+  resolveHref?(href: string): { index: number } | null
+}
+
+export interface FoliateSection {
+  /** Chemin du fichier dans l'archive. */
+  id: string
+  createDocument?(): Promise<Document>
+  /** Résout un lien relatif à cette section depuis la racine de l'archive. */
+  resolveHref?(href: string): string
+}
+
+/** Événement `link` (annulable) : un lien interne cliqué dans le livre. */
+export interface FoliateLinkDetail {
+  a: HTMLAnchorElement
+  /** Lien résolu depuis la racine de l'archive (`OEBPS/notes.xhtml#n1`). */
+  href: string
 }
 
 export interface FoliateRelocateDetail {

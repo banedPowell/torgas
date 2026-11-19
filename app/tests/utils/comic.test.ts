@@ -72,12 +72,21 @@ describe('sens de lecture', () => {
   })
 
   it('découpe l’écran en trois zones de tap', () => {
-    expect(comicTapAction(10, 300, 'ltr')).toBe('prev')
-    expect(comicTapAction(150, 300, 'ltr')).toBe('menu')
-    expect(comicTapAction(290, 300, 'ltr')).toBe('next')
-    expect(comicTapAction(10, 300, 'rtl')).toBe('next')
-    expect(comicTapAction(290, 300, 'rtl')).toBe('prev')
-    expect(comicTapAction(10, 0, 'ltr')).toBe('menu')
+    const size = { width: 300, height: 400 }
+    const at = (x: number) => ({ x, y: 200 })
+    expect(comicTapAction(at(10), size, 'ltr')).toBe('prev')
+    expect(comicTapAction(at(150), size, 'ltr')).toBe('menu')
+    expect(comicTapAction(at(290), size, 'ltr')).toBe('next')
+    expect(comicTapAction(at(10), size, 'rtl')).toBe('next')
+    expect(comicTapAction(at(290), size, 'rtl')).toBe('prev')
+    expect(comicTapAction(at(10), { width: 0, height: 400 }, 'ltr')).toBe('menu')
+  })
+
+  it('affiche la barre sur toute la bande du haut', () => {
+    const size = { width: 300, height: 400 }
+    expect(comicTapAction({ x: 10, y: 20 }, size, 'ltr')).toBe('menu')
+    expect(comicTapAction({ x: 290, y: 99 }, size, 'rtl')).toBe('menu')
+    expect(comicTapAction({ x: 290, y: 100 }, size, 'ltr')).toBe('next')
   })
 })
 

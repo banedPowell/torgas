@@ -19,6 +19,8 @@ const opening = ref(true)
 const tocOpen = ref(false)
 const settingsOpen = ref(false)
 const toc = computed(() => flattenToc(view.value?.book.toc))
+const footnotes = useFootnotePreview({ view: () => view.value, bounds: () => root.value })
+const rootSize = reactive(useElementSize(root))
 
 // Session de lecture : s'ouvre une fois le livre affiché ; chaque changement de page compte.
 const session = useReadingSession(() => props.workId, {
@@ -42,9 +44,12 @@ watch([() => reader.state.value, container], async ([state, el]) => {
     el.addEventListener('relocate', (e) =>
       onRelocate((e as CustomEvent<FoliateRelocateDetail>).detail),
     )
-    el.addEventListener('load', (e) =>
-      onSectionLoad((e as CustomEvent<{ doc: Document }>).detail.doc),
-    )
+    el.addEventListener('load', (e) => {
+      const { doc, index } = (e as CustomEvent<{ doc: Document; index: number }>).detail
+      onSectionLoad(doc)
+      footnotes.listen(doc, index)
+    })
+    footnotes.attach(el)
     container.value?.append(el)
     await el.open(reader.file.value!)
     view.value = el
@@ -76,13 +81,15 @@ function onSectionLoad(doc: Document) {
     const target = e.target as Element | null
     if (e.defaultPrevented || target?.closest?.('a') || !doc.getSelection()?.isCollapsed) return
     const frame = doc.defaultView?.frameElement?.getBoundingClientRect()
-    if (frame) onTap(frame.left + e.clientX)
+    if (frame) onTap(frame.left + e.clientX, frame.top + e.clientY)
   })
 }
 
-function onTap(clientX: number) {
+// Un tap ferme d'abord l'aperçu de note ouvert ; sinon, selon la zone (voir `tapZone`).
+function onTap(clientX: number, clientY: number) {
   const rect = container.value?.getBoundingClientRect()
-  if (rect) run(readerTapAction((clientX - rect.left) / rect.width))
+  if (footnotes.dismiss() || !rect) return
+  run(readerTapAction((clientX - rect.left) / rect.width, (clientY - rect.top) / rect.height))
 }
 
 function run(action: ReaderAction) {
@@ -97,6 +104,7 @@ function run(action: ReaderAction) {
 }
 
 function onKey(e: KeyboardEvent) {
+  if (e.key === 'Escape' && footnotes.dismiss()) return e.preventDefault()
   const inDialog = !!(e.target as Element | null)?.closest?.('[role="dialog"]')
   const action = readerKeyAction(e)
   if (!action || inDialog || tocOpen.value || settingsOpen.value) return
@@ -163,8 +171,18 @@ const failure = computed(() => {
         class="absolute inset-0"
         :aria-label="$t('reader.text')"
         role="document"
+        @click="(e: MouseEvent) => onTap(e.clientX, e.clientY)"
       />
       <ReaderSkeleton v-if="opening" class="absolute inset-0 bg-default" />
+      <ReaderFootnote
+        v-if="footnotes.note.value"
+        :note="footnotes.note.value"
+        :bounds="rootSize"
+        @close="footnotes.dismiss"
+        @go-to="footnotes.goToNote"
+        @enter="footnotes.keepOpen"
+        @leave="footnotes.scheduleClose"
+      />
 
       <ReaderChrome
         :visible="chrome.visible.value && !opening"

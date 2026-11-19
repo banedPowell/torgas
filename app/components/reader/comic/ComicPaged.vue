@@ -3,7 +3,7 @@ import type { ReadingDirection } from '~/types/core'
 import { comicTapAction, type ComicFit, type ComicSide } from '~/utils/comic'
 
 /**
- * Lecture page à page : zones de tap (gauche, centre, droite) et glissement horizontal.
+ * Lecture page à page : zones de tap (bande du haut, gauche, centre, droite) et glissement.
  * La fin de volume s'affiche dans le slot `end`.
  */
 const props = defineProps<{
@@ -23,7 +23,8 @@ const stage = useTemplateRef<HTMLElement>('stage')
 function onClick(event: MouseEvent) {
   if (!stage.value) return
   const rect = stage.value.getBoundingClientRect()
-  const action = comicTapAction(event.clientX - rect.left, rect.width, props.direction)
+  const point = { x: event.clientX - rect.left, y: event.clientY - rect.top }
+  const action = comicTapAction(point, rect, props.direction)
   if (action === 'menu') emit('menu')
   else if (action === 'next') emit('next')
   else emit('prev')
