@@ -96,6 +96,19 @@ export function useFootnotePreview(options: {
     }
   }
 
+  /** Position de l'appel, ou `null` s'il n'est plus à l'écran (page tournée). */
+  function visibleAnchor(a: HTMLAnchorElement): FootnoteAnchor | null {
+    const box = options.bounds()?.getBoundingClientRect()
+    if (!a.isConnected || !box) return null
+    const anchor = anchorOf(a)
+    const visible =
+      anchor.x + anchor.width > 0 &&
+      anchor.x < box.width &&
+      anchor.y + anchor.height > 0 &&
+      anchor.y < box.height
+    return visible ? anchor : null
+  }
+
   async function show(a: HTMLAnchorElement, opts: { pin: boolean; href?: string | null }) {
     clearTimers()
     const href = opts.href ?? resolveHref(a)
@@ -111,8 +124,10 @@ export function useFootnotePreview(options: {
       if (opts.pin) void options.view()?.goTo(href)
       return
     }
+    const anchor = visibleAnchor(a)
+    if (!anchor) return close()
     const label = (a.textContent ?? '').replace(/[\s[\]()]/g, '')
-    note.value = { label, text, href, anchor: anchorOf(a), pinned: opts.pin, keyboard }
+    note.value = { label, text, href, anchor, pinned: opts.pin, keyboard }
   }
 
   function close() {
@@ -184,10 +199,22 @@ export function useFootnotePreview(options: {
     else void show(a, { pin: true, href })
   }
 
-  /** Branche la vue foliate : liens cliqués, et fermeture quand la page tourne. */
+  /**
+   * La page a bougé (page tournée, focus, mise en page) : la bulle suit l'appel s'il est encore
+   * à l'écran, sinon elle se ferme.
+   */
+  function onRelocate() {
+    const open = note.value
+    if (!open || !current) return
+    const anchor = visibleAnchor(current)
+    if (anchor) note.value = { ...open, anchor }
+    else close()
+  }
+
+  /** Branche la vue foliate : liens cliqués, et page qui bouge. */
   function attach(view: View) {
     view.addEventListener('link', onLink)
-    view.addEventListener('relocate', close)
+    view.addEventListener('relocate', onRelocate)
   }
 
   return { note: readonly(note), attach, listen, dismiss, close, scheduleClose, keepOpen, goToNote }
