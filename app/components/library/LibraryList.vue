@@ -50,7 +50,9 @@ function rowAttrs(summary: EntrySummary) {
 function meta(summary: EntrySummary): string {
   const format = t(`format.${summary.format}`)
   const detail = summary.isSeries
-    ? t('library.entry.volumes', { read: summary.volumesFinished, total: summary.volumesTotal })
+    ? seriesCounts(summary)
+        .map(({ key, ...count }) => t(`library.entry.${key}`, count))
+        .join(' · ')
     : formatAuthors(summary.authors) || t('library.entry.unknownAuthor')
   return `${format} · ${detail}`
 }

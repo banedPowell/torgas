@@ -9,7 +9,7 @@ import type { Row } from './protocol'
 export const WORK_SELECT = `
   SELECT w.id, w.title, w.authors, w.kind, w.language, w.cover_url, w.series_id, w.volume,
          f.format, f.sha256, f.size_bytes, w.page_count,
-         le.added_at, le.status, le.progress, le.last_read_at
+         le.added_at, le.status, le.progress, le.last_read_at, w.chapter, w.chapter_title
   FROM work w
   JOIN library_entry le ON le.work_id = w.id
   JOIN file f ON f.id = (
@@ -30,9 +30,9 @@ export const INSERT_SERIES = `INSERT INTO series (id, title, direction, created_
   WHERE NOT EXISTS (SELECT 1 FROM series WHERE title = ?2 COLLATE NOCASE)`
 
 export const INSERT_WORK = `INSERT INTO work (id, title, authors, kind, language, cover_url,
-    series_id, volume, page_count, created_at)
+    series_id, volume, page_count, created_at, chapter, chapter_title)
   VALUES (?1, ?2, ?3, ?4, ?5, ?6,
-    (SELECT id FROM series WHERE title = ?7 COLLATE NOCASE), ?8, ?9, ?10)`
+    (SELECT id FROM series WHERE title = ?7 COLLATE NOCASE), ?8, ?9, ?10, ?11, ?12)`
 
 export const INSERT_FILE = `INSERT INTO file (id, work_id, format, sha256, size_bytes, path, added_at)
   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
@@ -122,6 +122,8 @@ export function workFromRow(row: Row): Work & { coverPath?: string } {
     coverPath: optionalText(row.cover_url),
     seriesId: optionalText(row.series_id),
     volume: optionalNumber(row.volume),
+    chapter: optionalNumber(row.chapter),
+    chapterTitle: optionalText(row.chapter_title),
     format: text(row.format) as Work['format'],
     sha256: text(row.sha256),
     sizeBytes: Number(row.size_bytes),

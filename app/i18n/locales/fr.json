@@ -50,6 +50,7 @@
     "entry": {
       "seriesBadge": "{format} · série",
       "volumes": "{read} / {total} vol.",
+      "chapters": "{read} / {total} chap.",
       "unknownAuthor": "Auteur inconnu",
       "progress": "Progression : {percent}"
     },
@@ -126,12 +127,14 @@
       "size": "Taille",
       "language": "Langue",
       "added": "Ajouté le",
-      "volumes": "Volumes"
+      "volumes": "Volumes",
+      "chapters": "Chapitres"
     },
     "progress": {
       "label": "Progression",
       "read": "Lu",
-      "volumes": "{read} / {total} vol. lus"
+      "volumes": "{read} / {total} vol. lus",
+      "chapters": "{read} / {total} chap. lus"
     },
     "action": {
       "read": "Lire",
@@ -140,7 +143,35 @@
       "readVolume": "Lire le volume {volume}",
       "resumeVolume": "Reprendre le volume {volume} à {percent}",
       "rereadVolume": "Relire le volume {volume}",
-      "resumeChapter": "Reprendre à « {chapter} »"
+      "resumeChapter": "Reprendre à « {chapter} »",
+      "readIssue": "Lire le chapitre {chapter}",
+      "resumeIssue": "Reprendre le chapitre {chapter} à {percent}",
+      "rereadIssue": "Relire le chapitre {chapter}"
+    },
+    "views": {
+      "label": "Afficher la série par",
+      "volumes": "Volumes",
+      "chapters": "Chapitres"
+    },
+    "seriesChapters": {
+      "title": "Chapitres",
+      "searchLabel": "Rechercher un chapitre",
+      "searchPlaceholder": "Numéro ou titre du chapitre",
+      "clear": "Effacer la recherche",
+      "number": "Chapitre {n}",
+      "group": "Volume {n}",
+      "noVolume": "Sans volume",
+      "groupCount": "{n} chap.",
+      "next": "Prochain chapitre",
+      "read": "Lu",
+      "inProgress": "En cours · {percent}",
+      "notStarted": "À lire",
+      "gap": "Chapitre {list} manquant | Chapitres {list} manquants",
+      "range": "{from} à {to}",
+      "incomplete": "Chapitre manquant : {list} | {n} chapitres manquants : {list}",
+      "otherGaps": "{n} autre suite | {n} autres suites",
+      "noResults": "Aucun chapitre ne correspond à « {query} ».",
+      "results": "Aucun chapitre trouvé | {n} chapitre trouvé | {n} chapitres trouvés"
     },
     "volumes": {
       "title": "Volumes",
@@ -188,6 +219,7 @@
     "comic": {
       "loading": "Ouverture du volume",
       "volumeTitle": "{series} · vol. {volume}",
+      "chapterTitle": "{series} · ch. {chapter}",
       "close": "Fermer le lecteur",
       "settings": "Réglages du lecteur",
       "thumbnails": "Toutes les pages",
@@ -231,9 +263,14 @@
         "title": "À suivre : volume {volume}",
         "titleNone": "Volume terminé",
         "description": "Le volume suivant n'est pas encore dans ta bibliothèque.",
+        "kickerChapter": "Fin du chapitre {chapter}",
+        "titleChapter": "À suivre : chapitre {chapter}",
+        "titleChapterNone": "Chapitre terminé",
+        "descriptionChapter": "Le chapitre suivant n'est pas encore dans ta bibliothèque.",
         "inLibrary": "Dans ta bibliothèque",
         "pages": "{n} page | {n} pages",
         "nextVolume": "Volume suivant",
+        "nextChapter": "Chapitre suivant",
         "backToSeries": "Retour à la série",
         "backToPages": "Revenir aux pages"
       },

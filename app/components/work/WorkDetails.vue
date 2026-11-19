@@ -11,7 +11,11 @@ const details = computed(() => {
     { key: 'size', value: formatBytes(props.meta.sizeBytes) },
   ]
   if (props.meta.isSeries) {
-    items.unshift({ key: 'volumes', value: String(props.meta.volumeCount) })
+    const counts = [
+      { key: 'volumes', value: String(props.meta.volumeCount) },
+      { key: 'chapters', value: String(props.meta.chapterCount) },
+    ]
+    items.unshift(...counts.filter((c) => c.value !== '0'))
   }
   if (props.meta.language)
     items.push({ key: 'language', value: formatLanguage(props.meta.language) })

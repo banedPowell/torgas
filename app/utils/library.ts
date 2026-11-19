@@ -1,5 +1,6 @@
 import type { FileFormat, ReadingStatus, Series, Work } from '~/types/core'
 import type { LibraryEntry, LibraryFilters, LibrarySort } from '~/types/library'
+import { splitSeriesWorks } from './seriesChapters'
 import { compareRecentFirst, naturalCompare } from './sort'
 
 /** Au-delà de ce nombre d'entrées, les listes de la bibliothèque sont virtualisées. */
@@ -23,9 +24,11 @@ export function matchesFilters(work: Work, filters: LibraryFilters, seriesTitle?
   )
 }
 
+/** Volumes par numéro, les chapitres d'un même volume (ou sans volume) par numéro. */
 function compareVolumes(a: Work, b: Work): number {
   const byVolume = (a.volume ?? Infinity) - (b.volume ?? Infinity)
-  return Number.isNaN(byVolume) || byVolume === 0 ? naturalCompare(a.title, b.title) : byVolume
+  if (!Number.isNaN(byVolume) && byVolume !== 0) return byVolume
+  return (a.chapter ?? -1) - (b.chapter ?? -1) || naturalCompare(a.title, b.title)
 }
 
 export function entryTitle(entry: LibraryEntry): string {
@@ -107,14 +110,21 @@ export interface EntrySummary {
   isSeries: boolean
   authors: string[]
   progress: number
+  /** Volumes entiers de la série. */
   volumesTotal: number
   volumesFinished: number
+  /** Chapitres publiés à part (série de chapitres). */
+  chaptersTotal: number
+  chaptersFinished: number
 }
 
 export function summarizeEntry(entry: LibraryEntry): EntrySummary {
   const works = entryWorks(entry)
   const first = works[0]!
   const authors = [...new Set(works.flatMap((w) => w.authors))]
+  const { volumes, chapters } = splitSeriesWorks(works)
+  const finished = (list: Work[]) =>
+    entry.kind === 'series' ? list.filter((w) => w.status === 'finished').length : 0
   return {
     id: entry.id,
     title: entryTitle(entry),
@@ -124,9 +134,25 @@ export function summarizeEntry(entry: LibraryEntry): EntrySummary {
     isSeries: entry.kind === 'series',
     authors,
     progress: entry.kind === 'series' ? entry.progress : entry.work.progress,
-    volumesTotal: works.length,
-    volumesFinished: entry.kind === 'series' ? entry.finishedCount : 0,
+    volumesTotal: volumes.length,
+    volumesFinished: finished(volumes),
+    chaptersTotal: chapters.length,
+    chaptersFinished: finished(chapters),
   }
+}
+
+/**
+ * Compteurs d'une série pour sa carte : volumes lus, chapitres lus, ou les deux (clés de
+ * traduction `library.entry.volumes` / `library.entry.chapters`).
+ */
+export function seriesCounts(
+  summary: EntrySummary,
+): { key: 'volumes' | 'chapters'; read: number; total: number }[] {
+  const counts = [
+    { key: 'volumes' as const, read: summary.volumesFinished, total: summary.volumesTotal },
+    { key: 'chapters' as const, read: summary.chaptersFinished, total: summary.chaptersTotal },
+  ]
+  return counts.filter((count) => count.total > 0)
 }
 
 /** Nombre d'œuvres par statut, plus le total (`all`). */

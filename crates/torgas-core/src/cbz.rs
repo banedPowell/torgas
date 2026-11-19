@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::comicinfo::{self, COMIC_INFO, ComicInfo};
 use crate::error::{CoreError, Result};
 use crate::sort::natural_cmp;
 use crate::zipread::{self, MemArchive};
@@ -72,6 +73,8 @@ struct PageEntry {
 pub struct CbzArchive<B = Vec<u8>> {
     archive: MemArchive<B>,
     pages: Vec<PageEntry>,
+    /// Index de `ComicInfo.xml` (à la racine de préférence).
+    comic_info: Option<usize>,
 }
 
 impl<B: AsRef<[u8]>> CbzArchive<B> {
@@ -82,12 +85,21 @@ impl<B: AsRef<[u8]>> CbzArchive<B> {
     pub fn open(bytes: B) -> Result<Self> {
         let archive = zipread::open(bytes)?;
         let mut pages = Vec::new();
+        let mut comic_info: Option<(usize, bool)> = None;
         for index in 0..archive.len() {
             let Some(name) = archive.name_for_index(index) else {
                 continue;
             };
             let name = name?;
             if name.ends_with('/') || is_ignored(&name) {
+                continue;
+            }
+            let file_name = name.rsplit('/').next().unwrap_or(&name);
+            if file_name.eq_ignore_ascii_case(COMIC_INFO) {
+                let at_root = file_name.len() == name.len();
+                if comic_info.is_none_or(|(_, root)| at_root && !root) {
+                    comic_info = Some((index, at_root));
+                }
                 continue;
             }
             if let Some(mime) = image_mime(&name) {
@@ -99,7 +111,18 @@ impl<B: AsRef<[u8]>> CbzArchive<B> {
             }
         }
         pages.sort_by(|a, b| natural_cmp(&a.name, &b.name));
-        Ok(Self { archive, pages })
+        Ok(Self {
+            archive,
+            pages,
+            comic_info: comic_info.map(|(index, _)| index),
+        })
+    }
+
+    /// Métadonnées `ComicInfo.xml`, si l'archive en contient une lisible.
+    pub fn comic_info(&mut self) -> Option<ComicInfo> {
+        let bytes = zipread::read_index(&mut self.archive, self.comic_info?).ok()?;
+        let text = String::from_utf8_lossy(&bytes);
+        comicinfo::parse(text.trim_start_matches('\u{feff}'))
     }
 
     /// Nombre de pages (images) de l'archive.

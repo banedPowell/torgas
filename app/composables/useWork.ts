@@ -1,5 +1,5 @@
 import type { ReadingDirection, ReadingStatus, Work } from '~/types/core'
-import type { WorkTarget } from '~/types/work'
+import type { SeriesView, WorkTarget } from '~/types/work'
 import type { LoadState } from './useLibrary'
 
 /**
@@ -48,27 +48,48 @@ export function useWork(id: MaybeRefOrGetter<string>) {
 
   const work = computed(() => (target.value?.kind === 'work' ? target.value.work : null))
   const series = computed(() => (target.value?.kind === 'series' ? target.value.series : null))
-  const volumes = computed(() => (target.value?.kind === 'series' ? target.value.volumes : []))
+  /** Œuvres de la série : volumes entiers et chapitres. */
+  const seriesWorks = computed(() => (target.value?.kind === 'series' ? target.value.works : []))
+  const split = computed(() => splitSeriesWorks(seriesWorks.value))
+  const volumes = computed(() => split.value.volumes)
+  const chapters = computed(() => split.value.chapters)
   const isSeries = computed(() => target.value?.kind === 'series')
+  /** Volumes ou chapitres : la bascule n'apparaît que si la série a les deux. */
+  const view = ref<SeriesView>('volumes')
+  const hasBothViews = computed(() => volumes.value.length > 0 && chapters.value.length > 0)
+  watch(
+    () => series.value?.id,
+    () => (view.value = defaultSeriesView(volumes.value, chapters.value)),
+    { immediate: true },
+  )
+  const viewWorks = computed(() => (view.value === 'chapters' ? chapters.value : volumes.value))
   const meta = computed(() => (target.value ? describeTarget(target.value) : null))
   const missing = computed(() => missingVolumes(volumes.value))
   const rows = computed(() => buildVolumeRows(volumes.value))
   const next = computed(() => nextVolume(volumes.value))
-  const summary = computed(() => (isSeries.value ? summarizeSeries(volumes.value) : null))
+  const upcomingChapter = computed(() => nextChapter(chapters.value))
+  const summary = computed(() =>
+    isSeries.value ? summarizeSeries(viewWorks.value, view.value) : null,
+  )
   const status = computed<ReadingStatus | null>(() => {
     if (work.value) return work.value.status
-    return series.value ? deriveSeriesStatus(volumes.value) : null
+    return series.value ? deriveSeriesStatus(seriesWorks.value) : null
   })
   /** Progression globale, de 0 à 1. */
   const progress = computed(() => work.value?.progress ?? summary.value?.progress ?? 0)
-  /** Ce que « Lire » ouvre : l'œuvre, ou le prochain volume (le premier si tout est terminé). */
-  const readTarget = computed<Work | null>(
-    () => work.value ?? next.value ?? volumes.value[0] ?? null,
-  )
+  /**
+   * Ce que « Lire » ouvre : l'œuvre, ou le prochain volume (ou chapitre, selon la vue) ; le
+   * premier si tout est terminé.
+   */
+  const readTarget = computed<Work | null>(() => {
+    if (work.value) return work.value
+    const upcoming = view.value === 'chapters' ? upcomingChapter.value : next.value
+    return upcoming ?? viewWorks.value[0] ?? seriesWorks.value[0] ?? null
+  })
   const action = computed(() => (readTarget.value ? readAction(readTarget.value) : null))
 
-  /** Ce que « Supprimer de la bibliothèque » retire : l'œuvre, ou tous les volumes de la série. */
-  const deletable = computed<Work[]>(() => (work.value ? [work.value] : volumes.value))
+  /** Ce que « Supprimer de la bibliothèque » retire : l'œuvre, ou toute la série. */
+  const deletable = computed<Work[]>(() => (work.value ? [work.value] : seriesWorks.value))
 
   /** Supprime l'œuvre ou la série ; renvoie `true` si c'est fait (erreur signalée par un toast). */
   function remove(): Promise<boolean> {
@@ -143,11 +164,15 @@ export function useWork(id: MaybeRefOrGetter<string>) {
     work,
     series,
     volumes,
+    chapters,
+    view,
+    hasBothViews,
     isSeries,
     meta,
     missing,
     rows,
     next,
+    nextChapter: upcomingChapter,
     summary,
     status,
     progress,

@@ -1,20 +1,44 @@
 <script setup lang="ts">
 import type { Work } from '~/types/core'
 
-/** Fin de volume : propose le volume suivant de la série, sinon le retour à la série. */
+/**
+ * Fin de volume (ou de chapitre) : propose la suite de la série (volume ou chapitre suivant),
+ * sinon le retour à la série.
+ */
 const props = defineProps<{
   work: Work
-  nextVolume: Work | null
+  next: Work | null
 }>()
 
 defineEmits<{ back: [] }>()
 
 const { t } = useI18n()
-const kicker = computed(() =>
-  props.work.volume !== undefined
+const chapter = computed(() => props.work.chapter !== undefined)
+const kicker = computed(() => {
+  if (props.work.chapter !== undefined) {
+    return t('reader.comic.end.kickerChapter', { chapter: formatIssueNumber(props.work.chapter) })
+  }
+  return props.work.volume !== undefined
     ? t('reader.comic.end.kicker', { volume: props.work.volume })
-    : t('reader.comic.end.kickerNone'),
-)
+    : t('reader.comic.end.kickerNone')
+})
+const title = computed(() => {
+  const next = props.next
+  if (chapter.value) {
+    return next?.chapter !== undefined
+      ? t('reader.comic.end.titleChapter', { chapter: formatIssueNumber(next.chapter) })
+      : t('reader.comic.end.titleChapterNone')
+  }
+  return next
+    ? t('reader.comic.end.title', { volume: next.volume })
+    : t('reader.comic.end.titleNone')
+})
+/** Numéro affiché sur la vignette de la suite. */
+const nextNumber = computed(() => {
+  const next = props.next
+  if (!next) return ''
+  return next.chapter !== undefined ? formatIssueNumber(next.chapter) : String(next.volume ?? '')
+})
 </script>
 
 <template>
@@ -28,48 +52,46 @@ const kicker = computed(() =>
       class="font-display text-3xl font-medium text-highlighted"
       tabindex="-1"
     >
-      {{
-        nextVolume
-          ? $t('reader.comic.end.title', { volume: nextVolume.volume })
-          : $t('reader.comic.end.titleNone')
-      }}
+      {{ title }}
     </h2>
 
-    <template v-if="nextVolume">
+    <template v-if="next">
       <div class="flex items-center gap-3.5 rounded-lg bg-elevated p-3.5">
         <span
           aria-hidden="true"
-          class="flex h-16 w-11 shrink-0 items-center justify-center rounded bg-inverted font-display text-xl text-inverted"
+          class="flex h-16 min-w-11 shrink-0 items-center justify-center rounded bg-inverted px-1.5 font-display text-xl text-inverted"
         >
-          {{ nextVolume.volume }}
+          {{ nextNumber }}
         </span>
         <div class="flex min-w-0 flex-col gap-1">
           <span class="truncate text-sm font-semibold text-highlighted">
-            {{ nextVolume.title }}
+            {{ next.chapterTitle || next.title }}
           </span>
           <span class="text-xs text-muted">
             {{ $t('reader.comic.end.inLibrary') }}
-            <template v-if="nextVolume.pageCount">
-              · {{ $t('reader.comic.end.pages', nextVolume.pageCount) }}
+            <template v-if="next.pageCount">
+              · {{ $t('reader.comic.end.pages', next.pageCount) }}
             </template>
           </span>
         </div>
       </div>
       <UButton
-        :to="`/read/${nextVolume.id}`"
+        :to="`/read/${next.id}`"
         replace
         size="xl"
         block
         class="h-13 rounded-lg text-base"
-        :label="$t('reader.comic.end.nextVolume')"
+        :label="$t(chapter ? 'reader.comic.end.nextChapter' : 'reader.comic.end.nextVolume')"
       />
     </template>
-    <p v-else class="text-sm text-muted">{{ $t('reader.comic.end.description') }}</p>
+    <p v-else class="text-sm text-muted">
+      {{ $t(chapter ? 'reader.comic.end.descriptionChapter' : 'reader.comic.end.description') }}
+    </p>
 
     <UButton
       :to="`/works/${work.id}`"
       color="neutral"
-      :variant="nextVolume ? 'link' : 'solid'"
+      :variant="next ? 'link' : 'solid'"
       size="lg"
       block
       class="h-11"

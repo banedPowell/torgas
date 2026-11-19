@@ -36,9 +36,17 @@ coverUrl?: string,
  */
 seriesId?: string, 
 /**
- * Numéro de volume dans la série.
+ * Numéro de volume dans la série (pour un chapitre : le volume qui le contient, s'il est connu).
  */
 volume?: number, 
+/**
+ * Numéro de chapitre : présent si l'œuvre est un chapitre et non un volume entier.
+ */
+chapter?: number, 
+/**
+ * Titre du chapitre, s'il est connu.
+ */
+chapterTitle?: string, 
 /**
  * Format du fichier.
  */

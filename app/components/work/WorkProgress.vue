@@ -4,7 +4,7 @@ import type { SeriesSummary } from '~/types/work'
 defineProps<{
   /** Progression globale, de 0 à 1. */
   progress: number
-  /** Présent pour une série : volumes terminés sur total. */
+  /** Présent pour une série : volumes (ou chapitres) terminés sur total. */
   summary?: SeriesSummary | null
 }>()
 </script>
@@ -14,7 +14,9 @@ defineProps<{
     <div class="flex items-baseline justify-between gap-3">
       <span class="font-mono text-xs text-toned">
         <template v-if="summary">
-          {{ $t('work.progress.volumes', { read: summary.finished, total: summary.total }) }}
+          {{
+            $t(`work.progress.${summary.unit}`, { read: summary.finished, total: summary.total })
+          }}
         </template>
         <template v-else>{{ $t('work.progress.read') }}</template>
       </span>

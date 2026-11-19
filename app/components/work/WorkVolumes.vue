@@ -8,6 +8,8 @@ const props = defineProps<{
   nextId?: string
   /** Numéros de volumes absents de la bibliothèque. */
   missing: readonly number[]
+  /** Titre masqué visuellement (la bascule Volumes / Chapitres le remplace). */
+  titleHidden?: boolean
 }>()
 
 const { t } = useI18n()
@@ -30,7 +32,7 @@ const incomplete = computed(() =>
 
 <template>
   <section :aria-label="$t('work.volumes.title')" class="flex flex-col gap-3">
-    <h2 class="font-display text-xl font-medium text-highlighted">
+    <h2 :class="titleHidden ? 'sr-only' : 'font-display text-xl font-medium text-highlighted'">
       {{ $t('work.volumes.title') }}
     </h2>
 

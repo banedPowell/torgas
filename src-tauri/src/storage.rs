@@ -151,6 +151,8 @@ mod tests {
             language: None,
             series_title: series.map(str::to_owned),
             volume: None,
+            chapter: None,
+            chapter_title: None,
             page_count: None,
             drm: false,
             cover: None,

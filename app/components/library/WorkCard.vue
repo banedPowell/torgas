@@ -21,10 +21,9 @@ const badge = computed(() => {
 })
 const meta = computed(() =>
   summary.value.isSeries
-    ? t('library.entry.volumes', {
-        read: summary.value.volumesFinished,
-        total: summary.value.volumesTotal,
-      })
+    ? seriesCounts(summary.value)
+        .map(({ key, ...count }) => t(`library.entry.${key}`, count))
+        .join(' · ')
     : formatAuthors(summary.value.authors) || t('library.entry.unknownAuthor'),
 )
 

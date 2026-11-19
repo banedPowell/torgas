@@ -235,6 +235,16 @@ pub fn cbz_with_folders() -> Vec<u8> {
     ])
 }
 
+/// CBZ de deux pages accompagné de `ComicInfo.xml` (contenu `xml`).
+pub fn cbz_with_comic_info(xml: &str) -> Vec<u8> {
+    let (p1, p2) = (jpeg_bytes(1), jpeg_bytes(2));
+    zip(&[
+        ("001.jpg", &p1),
+        ("002.jpg", &p2),
+        ("ComicInfo.xml", xml.as_bytes()),
+    ])
+}
+
 /// Archive ZIP qui n'est ni un EPUB ni un CBZ.
 pub fn zip_not_a_book() -> Vec<u8> {
     zip(&[("notes.txt", b"rien"), ("data/a.json", b"{}")])

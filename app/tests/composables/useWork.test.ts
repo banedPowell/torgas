@@ -66,7 +66,7 @@ describe('useWork', () => {
     expect(fiche.next.value?.id).toBe('nemo-10')
     expect(fiche.readTarget.value?.id).toBe('nemo-10')
     expect(fiche.action.value).toEqual({ kind: 'read', percent: 0 })
-    expect(fiche.summary.value).toEqual({ total: 2, finished: 1, progress: 0.5 })
+    expect(fiche.summary.value).toEqual({ unit: 'volumes', total: 2, finished: 1, progress: 0.5 })
     expect(fiche.status.value).toBe('reading')
     expect(fiche.meta.value?.title).toBe('Little Nemo')
   })
@@ -94,6 +94,50 @@ describe('useWork', () => {
     expect(fiche.readTarget.value?.id).toBe('s-1')
     expect(fiche.action.value?.kind).toBe('reread')
     expect(fiche.status.value).toBe('finished')
+  })
+
+  it('bascule entre volumes et chapitres, avec le prochain chapitre', async () => {
+    const chapters = [1050, 1051, 1052].map((n) =>
+      makeWork({
+        id: `c-${n}`,
+        title: `Nemo c${n}`,
+        kind: 'comic',
+        format: 'cbz',
+        seriesId: nemo.id,
+        chapter: n,
+        status: n === 1050 ? 'finished' : 'to_read',
+        progress: n === 1050 ? 1 : 0,
+      }),
+    )
+    bridge.current = new MemoryBridge({
+      works: [...sampleWorks, ...chapters],
+      series: sampleSeries,
+    })
+    const fiche = await open(nemo.id)
+    // Un volume reste à lire : la fiche s'ouvre sur les volumes.
+    expect(fiche.hasBothViews.value).toBe(true)
+    expect(fiche.view.value).toBe('volumes')
+    expect(fiche.volumes.value.map((v) => v.id)).toEqual(['nemo-2', 'nemo-10'])
+    expect(fiche.chapters.value.map((c) => c.id)).toEqual(['c-1050', 'c-1051', 'c-1052'])
+    expect(fiche.readTarget.value?.id).toBe('nemo-10')
+    expect(fiche.meta.value).toMatchObject({ volumeCount: 2, chapterCount: 3 })
+
+    fiche.view.value = 'chapters'
+    expect(fiche.nextChapter.value?.id).toBe('c-1051')
+    expect(fiche.readTarget.value?.id).toBe('c-1051')
+    expect(fiche.summary.value).toMatchObject({ unit: 'chapters', total: 3, finished: 1 })
+    expect(fiche.deletable.value).toHaveLength(5)
+  })
+
+  it('ouvre directement les chapitres d’une série sans volume', async () => {
+    const chapters = [2, 1].map((n) =>
+      makeWork({ id: `c-${n}`, title: `c${n}`, format: 'cbz', seriesId: nemo.id, chapter: n }),
+    )
+    bridge.current = new MemoryBridge({ works: chapters, series: sampleSeries })
+    const fiche = await open('c-2')
+    expect(fiche.hasBothViews.value).toBe(false)
+    expect(fiche.view.value).toBe('chapters')
+    expect(fiche.readTarget.value?.id).toBe('c-1')
   })
 
   it('reste prêt mais sans contenu quand l’identifiant est inconnu', async () => {
