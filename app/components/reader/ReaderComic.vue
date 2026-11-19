@@ -42,18 +42,8 @@ function onChromeFocus(event: FocusEvent) {
 watch(overlayOpen, (open) => (open ? hideTimer.stop() : hideTimer.start()))
 useEventListener(document, 'keydown', (e: KeyboardEvent) => e.key === 'Tab' && showChrome())
 
-const title = computed(() => {
-  const series = reader.series.value
-  if (series && props.work.chapter !== undefined) {
-    return t('reader.comic.chapterTitle', {
-      series: series.title,
-      chapter: formatIssueNumber(props.work.chapter),
-    })
-  }
-  return series && props.work.volume !== undefined
-    ? t('reader.comic.volumeTitle', { series: series.title, volume: props.work.volume })
-    : props.work.title
-})
+const workLabel = useWorkLabel()
+const title = computed(() => workLabel(props.work, reader.series.value))
 const subtitle = computed(() =>
   reader.series.value ? props.work.title : props.work.authors.join(', ') || undefined,
 )

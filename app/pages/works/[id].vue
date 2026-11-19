@@ -45,10 +45,9 @@ const epubComic = computed(() => deletable.value.some(isEpubComic))
 
 // Suppression : menu « Plus d'actions », confirmation, puis retour à la bibliothèque.
 const confirmingDelete = ref(false)
+const seriesItems = useSeriesItems()
 const deleteDescription = computed(() =>
-  series.value
-    ? t('deletion.seriesDescription', { n: deletable.value.length }, deletable.value.length)
-    : t('deletion.description'),
+  series.value ? seriesItems.deletionDescription(deletable.value) : t('deletion.description'),
 )
 async function confirmDelete() {
   if (!(await remove())) return

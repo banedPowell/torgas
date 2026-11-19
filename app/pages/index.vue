@@ -33,6 +33,7 @@ onBeforeUnmount(selection.stop)
 
 // Menu contextuel des cartes (clic droit, appui long sur mobile) et sa confirmation de suppression.
 const actions = useEntryActions()
+const seriesItems = useSeriesItems()
 const deleteOpen = computed({
   get: () => !!actions.pending.value,
   set: (open: boolean) => !open && actions.cancelDelete(),
@@ -44,7 +45,7 @@ const deleteTitle = computed(() => {
 const deleteDescription = computed(() => {
   const entry = actions.pending.value
   if (entry?.kind !== 'series') return t('deletion.description')
-  return t('deletion.seriesDescription', { n: entry.works.length }, entry.works.length)
+  return seriesItems.deletionDescription(entry.works)
 })
 
 const importer = useImport()
