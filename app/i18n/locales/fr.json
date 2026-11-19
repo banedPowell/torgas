@@ -67,7 +67,8 @@
       "description": "Le cœur de lecture n'a pas répondu ({message}).",
       "action": "Réessayer"
     },
-    "loading": "Chargement de la bibliothèque"
+    "loading": "Chargement de la bibliothèque",
+    "options": "Support, tri et affichage"
   },
   "resume": {
     "label": "Reprendre",

@@ -35,13 +35,11 @@ const meta = computed(() =>
         :title="summary.title"
         class="absolute inset-0 transition-transform duration-150 group-hover:-translate-y-0.5"
       />
-      <UBadge
-        :label="badge"
-        color="neutral"
-        variant="solid"
-        size="sm"
-        class="absolute top-1.5 left-1.5 font-mono text-[9px] tracking-wider uppercase"
-      />
+      <span
+        class="absolute top-1.5 left-1.5 rounded-sm bg-scrim px-[5px] py-0.5 font-mono text-[9px] leading-tight tracking-wider text-on-scrim uppercase"
+      >
+        {{ badge }}
+      </span>
     </div>
     <div class="flex min-w-0 flex-col gap-0.5">
       <span class="line-clamp-2 text-[13px] leading-tight font-semibold">{{ summary.title }}</span>

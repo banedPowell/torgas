@@ -41,7 +41,7 @@ const minutes = computed(() =>
       :min="0"
       :max="1000"
       :step="1"
-      size="sm"
+      size="lg"
       :aria-label="$t('reader.progress.label')"
       :aria-valuetext="formatPercent(value / 1000)"
       @change="emit('seek', value / 1000)"

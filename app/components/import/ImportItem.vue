@@ -8,13 +8,14 @@ const { t } = useI18n()
 const active = computed(() => ['pending', 'reading', 'importing'].includes(props.item.state))
 const percent = computed(() => Math.round(props.item.progress * 100))
 
-type AlertColor = 'neutral' | 'warning' | 'error'
+type AlertColor = 'neutral' | 'primary' | 'warning' | 'error'
 const alert = computed<{ color: AlertColor; icon: string; text: string } | null>(() => {
   switch (props.item.state) {
     case 'duplicate':
       return { color: 'neutral', icon: 'i-lucide-copy', text: t('import.alert.duplicate') }
     case 'drm':
-      return { color: 'error', icon: 'i-lucide-lock', text: t('import.alert.drm') }
+      // Brique (primaire) comme dans la maquette : l'alerte DRM n'utilise pas le corail.
+      return { color: 'primary', icon: 'i-lucide-lock', text: t('import.alert.drm') }
     case 'unsupported':
       return { color: 'warning', icon: 'i-lucide-file-x', text: t('import.alert.unsupported') }
     case 'error':
@@ -30,8 +31,11 @@ const alert = computed<{ color: AlertColor; icon: string; text: string } | null>
 </script>
 
 <template>
-  <li class="flex flex-col gap-2 rounded-xl border border-default p-3">
-    <div class="flex items-baseline justify-between gap-3 text-sm">
+  <li
+    class="flex flex-col gap-2 rounded-lg border border-default p-3"
+    :class="item.state === 'duplicate' ? 'bg-default' : ''"
+  >
+    <div class="flex items-baseline justify-between gap-3 text-[13px]">
       <span class="min-w-0 truncate font-semibold text-highlighted" :title="item.name">
         {{ item.name }}
       </span>

@@ -8,8 +8,8 @@ const props = defineProps<{
 }>()
 
 const MIN_CARD = 132
-const GAP_X = 16
-const GAP_Y = 20
+const GAP_X = 18
+const GAP_Y = 22
 /** Hauteur du texte et de la barre de progression sous la couverture. */
 const CAPTION = 64
 
@@ -45,7 +45,7 @@ const { list, containerProps, wrapperProps } = useVirtualList(rows, {
         <li
           v-for="row in list"
           :key="row.index"
-          class="grid gap-x-4"
+          class="grid gap-x-[18px]"
           :style="{
             height: `${rowHeight}px`,
             gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
@@ -57,7 +57,7 @@ const { list, containerProps, wrapperProps } = useVirtualList(rows, {
     </div>
     <ul
       v-else
-      class="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(132px,1fr))] sm:gap-x-4 sm:gap-y-5"
+      class="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(132px,1fr))] sm:gap-x-[18px] sm:gap-y-[22px]"
     >
       <li v-for="entry in entries" :key="entry.id">
         <WorkCard :entry="entry" />

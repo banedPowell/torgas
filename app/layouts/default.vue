@@ -42,7 +42,9 @@ const items = computed<NavigationMenuItem[]>(() => [
         orientation="vertical"
         color="neutral"
         :aria-label="$t('nav.main')"
-        :ui="{ link: 'aria-[current=page]:before:bg-accented' }"
+        :ui="{
+          link: 'h-10 px-2.5 text-sm before:inset-y-0 before:rounded-[10px] aria-[current=page]:font-semibold aria-[current=page]:before:bg-accented',
+        }"
       />
 
       <template #footer>

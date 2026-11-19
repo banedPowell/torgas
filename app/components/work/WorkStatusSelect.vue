@@ -22,7 +22,12 @@ const items = computed(() => STATUSES.map((value) => ({ value, label: t(`status.
     :search-input="false"
     :disabled="disabled"
     :aria-label="$t('work.status.label')"
-    class="w-full"
+    size="sm"
+    class="w-auto"
+    :ui="{
+      base: 'relative h-7 rounded-sm bg-accented ps-2 pe-7 text-xs text-highlighted before:absolute before:inset-x-0 before:-inset-y-2 before:content-[\'\'] hover:bg-accented',
+      trailingIcon: 'size-3.5 text-muted',
+    }"
     @update:model-value="emit('update:modelValue', $event as ReadingStatus)"
   />
 </template>

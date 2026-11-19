@@ -65,7 +65,7 @@ const emit = defineEmits<{
 
   <div
     v-if="!visible && position"
-    class="pointer-events-none absolute inset-x-0 bottom-[max(1.125rem,env(safe-area-inset-bottom))] text-center font-mono text-xs text-muted"
+    class="pointer-events-none absolute inset-x-0 bottom-[max(1.125rem,env(safe-area-inset-bottom))] text-center font-mono text-[11px] text-muted"
     aria-hidden="true"
   >
     {{ formatPercent(position.progress) }}

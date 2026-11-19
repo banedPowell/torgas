@@ -13,7 +13,7 @@ const emit = defineEmits<{ cancel: [] }>()
 <template>
   <div
     role="status"
-    class="flex items-center gap-3 rounded-xl border border-default bg-muted py-2.5 ps-3 pe-1"
+    class="flex items-center gap-3 rounded-lg border border-default bg-muted py-2.5 ps-3 pe-1"
   >
     <UIcon name="i-lucide-download" class="size-[18px] shrink-0 text-primary" aria-hidden="true" />
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
