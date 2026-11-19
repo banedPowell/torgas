@@ -239,7 +239,7 @@ export function makeAnnaCbz(): Fixture {
   }
 }
 
-const KINDLE_PAGES = [0, 1, 2]
+export const KINDLE_PAGES = [0, 1, 2]
 
 /**
  * EPUB Kindle d'un manga (One Piece, Vol. 67) : `fixed-layout`, `book-type` comic, sujets

@@ -9,6 +9,24 @@ const { work, state, error, load } = useReaderWork(id)
 // Ouverture à un chapitre précis depuis la fiche (`?at=<cible foliate>`), une seule fois.
 const startAt = computed(() => (typeof route.query.at === 'string' ? route.query.at : undefined))
 
+// Manga en EPUB fait de pages-images : lecteur de planches, comme un CBZ. Un manga importé
+// avant que ses pages soient comptées les fait compter (0 : il reste lu comme un livre).
+const core = useCore()
+const comicPages = ref<number | null>(null)
+watch(
+  work,
+  async (w) => {
+    comicPages.value = null
+    if (w?.format !== 'epub' || w.kind !== 'comic') return
+    comicPages.value = w.pageCount ?? (await core.getPageCount(w.id).catch(() => 0))
+  },
+  { immediate: true },
+)
+const comicEpub = computed(() => work.value?.format === 'epub' && work.value.kind === 'comic')
+const asComic = computed(
+  () => work.value?.format === 'cbz' || (comicEpub.value && (comicPages.value ?? 0) > 0),
+)
+
 function close() {
   if (window.history.state?.back) router.back()
   else router.push(`/works/${id.value}`)
@@ -19,7 +37,10 @@ defineShortcuts(computed(() => (work.value ? {} : { escape: close })))
 </script>
 
 <template>
-  <div v-if="state === 'loading'" class="flex flex-1 flex-col">
+  <div
+    v-if="state === 'loading' || (comicEpub && comicPages === null)"
+    class="flex flex-1 flex-col"
+  >
     <ReaderSkeleton />
   </div>
   <div v-else-if="state === 'error'" class="flex flex-1 items-center justify-center">
@@ -47,6 +68,7 @@ defineShortcuts(computed(() => (work.value ? {} : { escape: close })))
       <UButton icon="i-lucide-library" :label="$t('reader.back')" to="/" />
     </EmptyState>
   </div>
+  <LazyReaderComic v-else-if="asComic" :key="work.id" :work="work" @close="close" />
   <LazyReaderEpub
     v-else-if="work.format === 'epub'"
     :key="work.id"
@@ -54,5 +76,4 @@ defineShortcuts(computed(() => (work.value ? {} : { escape: close })))
     :start-at="startAt"
     @close="close"
   />
-  <LazyReaderComic v-else-if="work.format === 'cbz'" :key="work.id" :work="work" @close="close" />
 </template>

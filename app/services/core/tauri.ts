@@ -128,6 +128,10 @@ export class TauriBridge implements CoreBridge {
     return toBytes(await call<ArrayBuffer>('get_book_bytes', { id }))
   }
 
+  getPageCount(id: string): Promise<number> {
+    return this.ordered('get_page_count', { id })
+  }
+
   async getPageUrl(id: string, page: number): Promise<string> {
     return torgasUrl(`page/${id}/${page}`)
   }

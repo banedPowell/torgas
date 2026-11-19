@@ -265,13 +265,25 @@ pub fn parse_chapter(filename: &str) -> Option<NameInfo> {
 /// ([`parse_volume`]).
 pub fn parse_name(filename: &str) -> Option<NameInfo> {
     parse_chapter(filename).or_else(|| {
-        parse_volume(filename).map(|(series_title, volume)| NameInfo {
-            series_title,
-            volume: Some(volume),
-            chapter: None,
-            chapter_title: None,
-        })
+        parse_volume(filename)
+            // « Chapitre 1201.cbz » : un chapitre seul, sans série connue, pas la série
+            // « Chapitre » au volume 1201.
+            .filter(|(series_title, _)| !is_chapter_word(series_title))
+            .map(|(series_title, volume)| NameInfo {
+                series_title,
+                volume: Some(volume),
+                chapter: None,
+                chapter_title: None,
+            })
     })
+}
+
+/// Le texte n'est qu'un marqueur de chapitre (« Chapitre », « Ch. »…).
+fn is_chapter_word(text: &str) -> bool {
+    let word = fold(trim_separators(text.trim()));
+    CHAPTER_MARKERS
+        .iter()
+        .any(|marker| marker.trim_end_matches('.') == word.trim_end_matches('.'))
 }
 
 /// Forme canonique d'un titre de série, appliquée à toutes les sources (nom de fichier,
@@ -317,6 +329,15 @@ pub fn series_key(title: &str) -> String {
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lone_chapter_marker_is_not_a_series() {
+        assert_eq!(parse_name("Chapitre 1201.cbz"), None);
+        assert_eq!(parse_name("Chapter 12.cbz"), None);
+        let info = parse_name("One Piece - Chapitre 1201.cbz").unwrap();
+        assert_eq!(info.series_title, "One Piece");
+        assert_eq!(info.chapter, Some(1201.0));
+    }
 
     fn parsed(name: &str) -> Option<(String, f64)> {
         parse_volume(name)

@@ -45,6 +45,20 @@ test.describe('Manga : volumes et chapitres', () => {
     await page.getByRole('button', { name: 'Effacer la recherche' }).click()
     await expect(list.getByRole('link')).toHaveCount(3)
 
+    // Tri inversé : le dernier chapitre en tête ; puis retour à l'ordre de lecture.
+    await page.getByRole('button', { name: 'Tri : du premier au dernier' }).click()
+    await expect(list.getByRole('link').first()).toHaveAccessibleName(/^Chapitre 14 · /)
+    await page.getByRole('button', { name: 'Tri : du dernier au premier' }).click()
+    await expect(list.getByRole('link').first()).toHaveAccessibleName(/^Chapitre 11 · /)
+
+    // Filtre par état : rien n'est encore en cours.
+    await page.getByRole('combobox', { name: 'Filtrer les chapitres' }).click()
+    await page.getByRole('option', { name: 'En cours' }).click()
+    await expect(page.getByText('Aucun chapitre dans cet état.')).toBeVisible()
+    await page.getByRole('combobox', { name: 'Filtrer les chapitres' }).click()
+    await page.getByRole('option', { name: 'Tous' }).click()
+    await expect(list.getByRole('link')).toHaveCount(3)
+
     // Lecture du chapitre 11 jusqu'au bout, puis le chapitre suivant.
     await page.getByRole('link', { name: 'Lire le chapitre 11' }).click()
     await expect(page.getByRole('img', { name: `Page 1 sur ${CBZ_PAGES}` })).toBeVisible()
@@ -67,7 +81,7 @@ test.describe('Manga : volumes et chapitres', () => {
     // Retour à la fiche : elle rouvre les chapitres (dernière lecture), le 11 est lu.
     await page.getByRole('button', { name: 'Fermer le lecteur' }).click()
     await expect(page).toHaveURL(/\/works\//)
-    await expect(page.getByRole('link', { name: /^Chapitre 11 · Lu$/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Chapitre 11 · CBZ · Lu$/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /^(Lire|Reprendre) le chapitre 12/ })).toBeVisible()
 
     // La barre « Reprendre » nomme le chapitre par sa série, pas par son nom de fichier.

@@ -146,6 +146,10 @@ export class WebBridge implements CoreBridge {
     return new Uint8Array(await file.arrayBuffer())
   }
 
+  async getPageCount(id: string): Promise<number> {
+    return (await this.openArchive(id)).pageCount()
+  }
+
   getPageUrl(id: string, page: number): Promise<string> {
     const key = `${id}:${page}`
     let url = this.pageUrls.get(key)

@@ -190,12 +190,19 @@ export function useComicReader(work: MaybeRefOrGetter<Work>, options: ComicReade
         core.listWorks(),
       ])
       const current = fresh ?? toValue(work)
-      const count = current.pageCount ?? 0
+      // Manga EPUB importé avant que ses pages soient comptées : on les compte à l'ouverture.
+      const count = current.pageCount ?? (await core.getPageCount(id))
       if (count <= 0) throw new Error('empty')
       pageCount.value = count
       series.value = allSeries.find((s) => s.id === current.seriesId) ?? null
       nextWork.value = findNextComic(works, current) ?? null
-      const stored = locator?.format === 'cbz' ? locator : null
+      // Position laissée par le lecteur de livres (manga EPUB) : on reprend à la même progression.
+      const stored =
+        locator?.format === 'cbz'
+          ? locator
+          : locator
+            ? { format: 'cbz' as const, progress: locator.progress }
+            : null
       const last = await saver.restore(stored, fresh?.lastReadAt)
       const resume = last ? (last.page ?? comicPageFromProgress(last.progress, count)) : 0
       anchor.value = clampComicPage(resume, count)

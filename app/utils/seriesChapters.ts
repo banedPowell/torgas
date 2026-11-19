@@ -110,18 +110,38 @@ export function matchesChapterQuery(work: Work, query: string): boolean {
 
 const NO_VOLUME = 'none'
 
+/** Ordre de la liste des chapitres : du premier au dernier, ou l'inverse. */
+export type ChapterOrder = 'asc' | 'desc'
+/** Filtre de la liste des chapitres : tous, ou un seul état de lecture. */
+export type ChapterFilter = 'all' | ChapterState
+
+export interface ChapterListView {
+  order?: ChapterOrder
+  filter?: ChapterFilter
+}
+
 /**
  * Lignes de la liste des chapitres : regroupées par volume (croissant, « Sans volume » en
  * dernier), chaque volume par numéro de chapitre. Un intitulé de volume précède chaque groupe,
  * sauf si tous les chapitres sont sans volume. Sans recherche, chaque suite de chapitres
  * manquants forme une ligne `gap` avant le chapitre présent qui la suit.
+ *
+ * `view` inverse l'ordre (volumes et chapitres, du dernier au premier) ou ne garde qu'un état
+ * de lecture ; filtrée, la liste ne montre pas les chapitres manquants.
  */
-export function buildSeriesChapterRows(chapters: readonly Work[], query = ''): SeriesChapterRow[] {
+export function buildSeriesChapterRows(
+  chapters: readonly Work[],
+  query = '',
+  view: ChapterListView = {},
+): SeriesChapterRow[] {
+  const filter = view.filter ?? 'all'
   const searching = query.trim() !== ''
-  const gaps = new Map(searching ? [] : chapterGaps(chapters).map((gap) => [gap.beforeId, gap]))
+  const narrowed = searching || filter !== 'all'
+  const gaps = new Map(narrowed ? [] : chapterGaps(chapters).map((gap) => [gap.beforeId, gap]))
   const groups = new Map<string, { volume?: number; works: Work[] }>()
   for (const work of sortChapters(chapters)) {
     if (searching && !matchesChapterQuery(work, query)) continue
+    if (filter !== 'all' && chapterState(work) !== filter) continue
     const key = work.volume === undefined ? NO_VOLUME : String(work.volume)
     const group = groups.get(key)
     if (group) group.works.push(work)
@@ -131,6 +151,8 @@ export function buildSeriesChapterRows(chapters: readonly Work[], query = ''): S
     ([, a], [, b]) => (a.volume ?? Infinity) - (b.volume ?? Infinity),
   )
   const withHeadings = !(ordered.length === 1 && ordered[0]![0] === NO_VOLUME)
+  const descending = view.order === 'desc'
+  if (descending) ordered.reverse()
 
   const rows: SeriesChapterRow[] = []
   for (const [key, group] of ordered) {
@@ -142,13 +164,15 @@ export function buildSeriesChapterRows(chapters: readonly Work[], query = ''): S
         count: group.works.length,
       })
     }
+    // Dans l'ordre inverse, un trou suit le chapitre présent qui le borne par le haut.
+    const body: SeriesChapterRow[] = []
     for (const work of group.works) {
       const gap = gaps.get(work.id)
       if (gap) {
         const count = gap.to - gap.from + 1
-        rows.push({ kind: 'gap', key: `gap-${gap.from}`, from: gap.from, to: gap.to, count })
+        body.push({ kind: 'gap', key: `gap-${gap.from}`, from: gap.from, to: gap.to, count })
       }
-      rows.push({
+      body.push({
         kind: 'chapter',
         key: work.id,
         work,
@@ -157,6 +181,7 @@ export function buildSeriesChapterRows(chapters: readonly Work[], query = ''): S
         state: chapterState(work),
       })
     }
+    rows.push(...(descending ? body.reverse() : body))
   }
   return rows
 }

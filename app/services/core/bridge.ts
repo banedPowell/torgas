@@ -29,6 +29,11 @@ export interface CoreBridge {
    */
   deleteWorks(ids: string[]): Promise<void>
   getBookBytes(id: string): Promise<Uint8Array>
+  /**
+   * Nombre de pages d'une œuvre lue page par page : CBZ, ou manga EPUB fait de pages-images
+   * (0 pour un livre). Sert aux œuvres importées avant que leur nombre de pages soit connu.
+   */
+  getPageCount(id: string): Promise<number>
   getPageUrl(id: string, page: number): Promise<string>
   getLocator(id: string): Promise<Locator | null>
   saveLocator(id: string, locator: Locator): Promise<void>
