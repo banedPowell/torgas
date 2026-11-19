@@ -9,11 +9,26 @@ export async function openLibrary(page: Page): Promise<void> {
 }
 
 /** Importe un fichier par le sélecteur de fichiers, comme le ferait l'utilisateur. */
-export async function importFile(page: Page, fixture: Fixture): Promise<void> {
+export async function importFile(
+  page: Page,
+  fixture: Fixture,
+  options: { keepOpen?: boolean } = {},
+): Promise<void> {
+  // « Importer » ouvre le panneau d'import (Slideover ou Drawer) ; sa zone de dépôt ouvre le
+  // sélecteur de fichiers. Le panneau reste ouvert pendant l'import : on le referme ensuite.
+  const panel = page.getByRole('dialog', { name: 'Import' })
+  if (!(await panel.isVisible())) {
+    await page.getByRole('button', { name: 'Importer des œuvres', exact: true }).click()
+  }
   const chooser = page.waitForEvent('filechooser')
-  await page.getByRole('button', { name: 'Importer des œuvres', exact: true }).click()
+  await panel.getByRole('button', { name: /Dépose tes fichiers ici/ }).click()
   const files = await chooser
   await files.setFiles({ name: fixture.name, mimeType: fixture.mimeType, buffer: fixture.buffer })
+  await expect(panel.getByText(new RegExp(`${escapeRegExp(fixture.name)}`)).first()).toBeVisible()
+  await expect(panel.getByRole('button', { name: /Annuler/ })).toBeHidden({ timeout: 30_000 })
+  if (options.keepOpen) return
+  await page.keyboard.press('Escape')
+  await expect(panel).toBeHidden()
 }
 
 /** Carte d'une œuvre (nom accessible : couverture, badge de format, titre, auteur, progression). */
@@ -113,4 +128,8 @@ export async function readerExactPercent(page: Page): Promise<string> {
 export function resumeLink(page: Page, percent: string) {
   const pattern = percent.replace(/\s/g, '\\s')
   return page.getByRole('link', { name: new RegExp(`^Reprendre à ${pattern}$`) })
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

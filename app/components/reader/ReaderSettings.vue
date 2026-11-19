@@ -84,15 +84,17 @@ const lineHeight = computed({
             >
           </span>
           <div class="flex items-center gap-2">
-            <UButton
-              icon="i-lucide-a-arrow-down"
-              color="neutral"
-              variant="ghost"
-              class="size-11 justify-center"
-              :aria-label="$t('reader.settings.smaller')"
-              :disabled="settings.fontSize <= FONT_SIZE.min"
-              @click="fontSize = settings.fontSize - FONT_SIZE.step"
-            />
+            <UTooltip :text="$t('reader.settings.smaller')">
+              <UButton
+                icon="i-lucide-a-arrow-down"
+                color="neutral"
+                variant="ghost"
+                class="size-11 justify-center"
+                :aria-label="$t('reader.settings.smaller')"
+                :disabled="settings.fontSize <= FONT_SIZE.min"
+                @click="fontSize = settings.fontSize - FONT_SIZE.step"
+              />
+            </UTooltip>
             <USlider
               v-model="fontSize"
               :min="FONT_SIZE.min"
@@ -101,15 +103,17 @@ const lineHeight = computed({
               aria-labelledby="reader-font-size"
               class="flex-1"
             />
-            <UButton
-              icon="i-lucide-a-arrow-up"
-              color="neutral"
-              variant="ghost"
-              class="size-11 justify-center"
-              :aria-label="$t('reader.settings.larger')"
-              :disabled="settings.fontSize >= FONT_SIZE.max"
-              @click="fontSize = settings.fontSize + FONT_SIZE.step"
-            />
+            <UTooltip :text="$t('reader.settings.larger')">
+              <UButton
+                icon="i-lucide-a-arrow-up"
+                color="neutral"
+                variant="ghost"
+                class="size-11 justify-center"
+                :aria-label="$t('reader.settings.larger')"
+                :disabled="settings.fontSize >= FONT_SIZE.max"
+                @click="fontSize = settings.fontSize + FONT_SIZE.step"
+              />
+            </UTooltip>
           </div>
         </div>
 

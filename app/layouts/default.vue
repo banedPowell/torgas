@@ -51,7 +51,9 @@ const items = computed<NavigationMenuItem[]>(() => [
       />
 
       <template #footer>
-        <UColorModeButton :aria-label="$t('nav.colorMode')" />
+        <UTooltip :text="$t('nav.colorMode')">
+          <UColorModeButton :aria-label="$t('nav.colorMode')" />
+        </UTooltip>
       </template>
     </UDashboardSidebar>
 

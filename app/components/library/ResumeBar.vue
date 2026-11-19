@@ -31,21 +31,25 @@ const emit = defineEmits<{ dismiss: [] }>()
         </div>
       </div>
     </NuxtLink>
-    <UButton
-      :to="`/read/${work.id}`"
-      icon="i-lucide-play"
-      color="neutral"
-      variant="solid"
-      :aria-label="$t('resume.action', { title: work.title })"
-      class="size-11 shrink-0 justify-center rounded-full bg-default text-highlighted hover:bg-muted"
-    />
-    <UButton
-      icon="i-lucide-x"
-      color="neutral"
-      variant="ghost"
-      :aria-label="$t('resume.dismiss')"
-      class="size-11 shrink-0 justify-center rounded-full text-inverted hover:bg-accented/20"
-      @click="emit('dismiss')"
-    />
+    <UTooltip :text="$t('resume.action', { title: work.title })">
+      <UButton
+        :to="`/read/${work.id}`"
+        icon="i-lucide-play"
+        color="neutral"
+        variant="solid"
+        :aria-label="$t('resume.action', { title: work.title })"
+        class="size-11 shrink-0 justify-center rounded-full bg-default text-highlighted hover:bg-muted"
+      />
+    </UTooltip>
+    <UTooltip :text="$t('resume.dismiss')">
+      <UButton
+        icon="i-lucide-x"
+        color="neutral"
+        variant="ghost"
+        :aria-label="$t('resume.dismiss')"
+        class="size-11 shrink-0 justify-center rounded-full text-inverted hover:bg-accented/20"
+        @click="emit('dismiss')"
+      />
+    </UTooltip>
   </aside>
 </template>

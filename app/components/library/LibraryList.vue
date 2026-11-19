@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ContextMenuItem } from '@nuxt/ui'
 import type { LibraryEntry } from '~/types/library'
 import type { EntrySummary } from '~/utils/library'
 
@@ -9,6 +10,8 @@ const props = defineProps<{
   /** Mode sélection : les lignes se cochent (identifiants d'entrée cochés dans `selected`). */
   selecting?: boolean
   selected?: ReadonlySet<string>
+  /** Menu contextuel de chaque entrée. */
+  menuFor?: (entry: LibraryEntry) => ContextMenuItem[][]
 }>()
 
 const emit = defineEmits<{ toggle: [id: string] }>()
@@ -23,6 +26,11 @@ const { list, containerProps, wrapperProps } = useVirtualList(virtualSource, {
   itemHeight: ROW_HEIGHT,
   overscan: 8,
 })
+const entryById = computed(() => new Map(props.entries.map((e) => [e.id, e])))
+function menu(id: string): ContextMenuItem[][] {
+  const entry = entryById.value.get(id)
+  return entry && props.menuFor ? props.menuFor(entry) : []
+}
 const rows = computed(() =>
   props.virtualized ? list.value.map((item) => item.data) : summaries.value,
 )
@@ -52,39 +60,41 @@ function meta(summary: EntrySummary): string {
   <div v-bind="virtualized ? containerProps : {}" :class="virtualized ? 'min-h-0 flex-1' : ''">
     <ul v-bind="virtualized ? wrapperProps : {}" class="divide-y divide-default">
       <li v-for="summary in rows" :key="summary.id" :style="{ height: `${ROW_HEIGHT}px` }">
-        <component
-          :is="selecting ? 'button' : NuxtLink"
-          v-bind="rowAttrs(summary)"
-          class="flex h-full w-full items-center gap-3 rounded-md px-1 text-start text-highlighted hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
-        >
-          <span
-            v-if="selecting"
-            aria-hidden="true"
-            class="flex size-6 shrink-0 items-center justify-center rounded-full border-2"
-            :class="
-              selected?.has(summary.id)
-                ? 'border-primary bg-primary text-inverted'
-                : 'border-(--ui-border-accented) text-transparent'
-            "
+        <UContextMenu :items="menu(summary.id)" :disabled="!menuFor || selecting">
+          <component
+            :is="selecting ? 'button' : NuxtLink"
+            v-bind="rowAttrs(summary)"
+            class="flex h-full w-full items-center gap-3 rounded-md px-1 text-start [-webkit-touch-callout:none] text-highlighted hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
           >
-            <UIcon name="i-lucide-check" class="size-3.5" />
-          </span>
-          <CoverImage :src="summary.coverUrl" :title="summary.title" class="h-16 w-11 shrink-0" />
-          <div class="flex min-w-0 flex-1 flex-col gap-1">
-            <span class="truncate text-sm font-semibold">{{ summary.title }}</span>
-            <span class="truncate text-xs text-muted">{{ meta(summary) }}</span>
-            <UProgress
-              :model-value="Math.round(summary.progress * 100)"
-              size="2xs"
-              :aria-label="
-                $t('library.entry.progress', { percent: formatPercent(summary.progress) })
+            <span
+              v-if="selecting"
+              aria-hidden="true"
+              class="flex size-6 shrink-0 items-center justify-center rounded-[5px] border-2"
+              :class="
+                selected?.has(summary.id)
+                  ? 'border-primary bg-primary text-inverted'
+                  : 'border-(--ui-border-accented) text-transparent'
               "
-            />
-          </div>
-          <span class="w-12 shrink-0 text-right font-mono text-xs text-muted">
-            {{ formatPercent(summary.progress) }}
-          </span>
-        </component>
+            >
+              <UIcon name="i-lucide-check" class="size-3.5" />
+            </span>
+            <CoverImage :src="summary.coverUrl" :title="summary.title" class="h-16 w-11 shrink-0" />
+            <div class="flex min-w-0 flex-1 flex-col gap-1">
+              <span class="truncate text-sm font-semibold">{{ summary.title }}</span>
+              <span class="truncate text-xs text-muted">{{ meta(summary) }}</span>
+              <UProgress
+                :model-value="Math.round(summary.progress * 100)"
+                size="2xs"
+                :aria-label="
+                  $t('library.entry.progress', { percent: formatPercent(summary.progress) })
+                "
+              />
+            </div>
+            <span class="w-12 shrink-0 text-right font-mono text-xs text-muted">
+              {{ formatPercent(summary.progress) }}
+            </span>
+          </component>
+        </UContextMenu>
       </li>
     </ul>
   </div>

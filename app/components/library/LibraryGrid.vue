@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ContextMenuItem } from '@nuxt/ui'
 import type { LibraryEntry } from '~/types/library'
 
 const props = defineProps<{
@@ -8,6 +9,8 @@ const props = defineProps<{
   /** Mode sélection : les cartes se cochent (identifiants d'entrée cochés dans `selected`). */
   selecting?: boolean
   selected?: ReadonlySet<string>
+  /** Menu contextuel de chaque entrée. */
+  menuFor?: (entry: LibraryEntry) => ContextMenuItem[][]
 }>()
 
 const emit = defineEmits<{ toggle: [id: string] }>()
@@ -60,6 +63,7 @@ const { list, containerProps, wrapperProps } = useVirtualList(rows, {
             v-for="entry in row.data"
             :key="entry.id"
             :entry="entry"
+            :menu="menuFor?.(entry)"
             :selectable="selecting"
             :selected="selected?.has(entry.id)"
             @toggle="emit('toggle', $event)"
@@ -74,6 +78,7 @@ const { list, containerProps, wrapperProps } = useVirtualList(rows, {
       <li v-for="entry in entries" :key="entry.id">
         <WorkCard
           :entry="entry"
+          :menu="menuFor?.(entry)"
           :selectable="selecting"
           :selected="selected?.has(entry.id)"
           @toggle="emit('toggle', $event)"

@@ -100,14 +100,16 @@ const notesGroup = computed<AccordionItem[]>(() => [
                   {{ formatPercent(bookmark.locator.progress) }}
                 </span>
               </button>
-              <UButton
-                icon="i-lucide-trash-2"
-                color="neutral"
-                variant="ghost"
-                class="size-11 justify-center"
-                :aria-label="$t('reader.toc.remove', { label: bookmark.label })"
-                @click="emit('removeBookmark', bookmark.id)"
-              />
+              <UTooltip :text="$t('reader.toc.remove', { label: bookmark.label })">
+                <UButton
+                  icon="i-lucide-trash-2"
+                  color="neutral"
+                  variant="ghost"
+                  class="size-11 justify-center"
+                  :aria-label="$t('reader.toc.remove', { label: bookmark.label })"
+                  @click="emit('removeBookmark', bookmark.id)"
+                />
+              </UTooltip>
             </li>
           </ul>
         </template>

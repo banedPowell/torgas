@@ -18,13 +18,21 @@ const isDesktop = useMediaQuery('(min-width: 1024px)')
 const UModal = resolveComponent('UModal')
 const UDrawer = resolveComponent('UDrawer')
 
-const ui = {
-  content: 'max-lg:rounded-t-3xl',
-  container: 'gap-4 px-5 pt-3 pb-7 lg:p-6',
-  header: 'p-0 min-h-0 border-none',
+// La modale (desktop) et le tiroir (mobile) n'ont pas les mêmes zones : chacun ses marges.
+const modalUi = {
+  content: 'max-w-md rounded-2xl',
+  header: 'min-h-0 border-none px-6 pt-6 pb-0',
   title: 'font-display text-2xl leading-tight font-medium text-highlighted',
   description: 'mt-3 text-sm leading-normal text-toned',
-  footer: 'flex gap-2.5 p-0 border-none',
+  footer: 'flex gap-2.5 border-none px-6 pt-6 pb-6',
+}
+const drawerUi = {
+  content: 'rounded-t-3xl',
+  container: 'gap-4 px-5 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))]',
+  header: 'min-h-0 border-none p-0',
+  title: 'font-display text-2xl leading-tight font-medium text-highlighted',
+  description: 'mt-3 text-sm leading-normal text-toned',
+  footer: 'flex gap-2.5 border-none p-0',
 }
 </script>
 
@@ -36,7 +44,7 @@ const ui = {
     :description="description"
     :dismissible="!loading"
     :close="false"
-    :ui="ui"
+    :ui="isDesktop ? modalUi : drawerUi"
   >
     <template #footer>
       <UButton

@@ -77,7 +77,9 @@
       "count": "Aucune sélection | {n} sélectionné | {n} sélectionnés",
       "select": "Sélectionner {title}",
       "close": "Quitter la sélection",
-      "delete": "Supprimer"
+      "delete": "Supprimer",
+      "done": "Terminer",
+      "doneLabel": "Quitter la sélection"
     }
   },
   "resume": {
@@ -156,7 +158,8 @@
       "count": "Chapitres · {n}",
       "label": "Chapitres",
       "loading": "Lecture des chapitres",
-      "read": "Lu"
+      "read": "Lu",
+      "readFrom": "Lire ce chapitre"
     }
   },
   "deletion": {
@@ -350,6 +353,12 @@
       "unsupported": "Format non pris en charge : Torgas lit les EPUB et les CBZ.",
       "error": "Import impossible : {message}"
     },
-    "open": "Ouvrir {title}"
+    "open": "Ouvrir {title}",
+    "panelDescription": "Dépose ou choisis des EPUB et des CBZ, puis suis leur import.",
+    "openPanel": "Voir le détail de l'import"
+  },
+  "actions": {
+    "openWork": "Ouvrir la fiche",
+    "readNext": "Lire le prochain volume"
   }
 }

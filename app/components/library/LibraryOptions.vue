@@ -48,10 +48,33 @@ const selectUi = computed(() => ({
 <template>
   <div
     class="flex items-center gap-1"
-    :class="desktop ? 'flex-wrap justify-end lg:gap-3' : 'justify-between'"
+    :class="desktop ? 'flex-wrap lg:gap-3' : 'justify-between'"
     role="group"
     :aria-label="$t('library.options')"
   >
+    <!-- « Sélectionner » en tête ; une fois activé, il devient « Terminer ». -->
+    <UButton
+      :icon="selecting ? 'i-lucide-check' : 'i-lucide-square-check-big'"
+      color="neutral"
+      :variant="selecting ? 'solid' : desktop ? 'outline' : 'ghost'"
+      :label="
+        desktop
+          ? selecting
+            ? $t('library.selection.done')
+            : $t('library.selection.start')
+          : undefined
+      "
+      :aria-label="
+        selecting ? $t('library.selection.doneLabel') : $t('library.selection.startLabel')
+      "
+      :aria-pressed="!!selecting"
+      :class="
+        desktop
+          ? 'order-0 h-10 rounded-[10px]'
+          : 'order-first size-11 shrink-0 justify-center rounded-[10px]'
+      "
+      @click="emit('update:selecting', !selecting)"
+    />
     <USelect
       :model-value="sort"
       :items="sortItems"
@@ -74,51 +97,39 @@ const selectUi = computed(() => ({
         @update:model-value="emit('update:format', $event as FormatFilter)"
       />
       <UFieldGroup v-if="!desktop" :aria-label="$t('library.view.label')">
-        <UButton
+        <UTooltip
           v-for="button in viewButtons"
           :key="button.value"
+          :text="$t(`library.view.${button.value}`)"
+        >
+          <UButton
+            :icon="button.icon"
+            color="neutral"
+            :variant="view === button.value ? 'soft' : 'ghost'"
+            :aria-label="$t(`library.view.${button.value}`)"
+            :aria-pressed="view === button.value"
+            class="size-11 justify-center rounded-[10px]"
+            @click="emit('update:view', button.value)"
+          />
+        </UTooltip>
+      </UFieldGroup>
+    </div>
+    <UFieldGroup v-if="desktop" :aria-label="$t('library.view.label')" class="order-3">
+      <UTooltip
+        v-for="button in viewButtons"
+        :key="button.value"
+        :text="$t(`library.view.${button.value}`)"
+      >
+        <UButton
           :icon="button.icon"
           color="neutral"
           :variant="view === button.value ? 'soft' : 'ghost'"
           :aria-label="$t(`library.view.${button.value}`)"
           :aria-pressed="view === button.value"
-          class="size-11 justify-center rounded-[10px]"
+          class="size-10 justify-center"
           @click="emit('update:view', button.value)"
         />
-      </UFieldGroup>
-      <UButton
-        v-if="!desktop"
-        icon="i-lucide-square-check-big"
-        color="neutral"
-        :variant="selecting ? 'soft' : 'ghost'"
-        :aria-label="$t('library.selection.startLabel')"
-        :aria-pressed="!!selecting"
-        class="size-11 justify-center rounded-[10px]"
-        @click="emit('update:selecting', !selecting)"
-      />
-    </div>
-    <UFieldGroup v-if="desktop" :aria-label="$t('library.view.label')" class="order-3">
-      <UButton
-        v-for="button in viewButtons"
-        :key="button.value"
-        :icon="button.icon"
-        color="neutral"
-        :variant="view === button.value ? 'soft' : 'ghost'"
-        :aria-label="$t(`library.view.${button.value}`)"
-        :aria-pressed="view === button.value"
-        class="size-10 justify-center"
-        @click="emit('update:view', button.value)"
-      />
+      </UTooltip>
     </UFieldGroup>
-    <UButton
-      v-if="desktop"
-      icon="i-lucide-square-check-big"
-      color="neutral"
-      :variant="selecting ? 'soft' : 'outline'"
-      :label="$t('library.selection.start')"
-      :aria-pressed="!!selecting"
-      class="order-4 h-10 rounded-[10px]"
-      @click="emit('update:selecting', !selecting)"
-    />
   </div>
 </template>

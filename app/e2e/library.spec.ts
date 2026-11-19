@@ -41,8 +41,10 @@ test.describe('EPUB : importer, lire, rouvrir', () => {
     await page.getByRole('button', { name: 'Quitter le lecteur' }).click()
     await expect(page).toHaveURL(/\/works\//)
 
-    // Dès le retour, la fiche affiche la progression enregistrée à la fermeture (#29).
-    await resumeLink(page, percent).click()
+    // Dès le retour, la fiche affiche la progression enregistrée à la fermeture (#29). Le bouton
+    // dit « Reprendre à 12 % », puis « Reprendre à « chapitre » » une fois les chapitres lus.
+    await expect(page.getByText(percent, { exact: true }).first()).toBeVisible()
+    await page.getByRole('link', { name: /^Reprendre à/ }).click()
     await expect(page).toHaveURL(/\/read\//)
     await expect.poll(() => readerPercent(page)).toBe(position)
   })
@@ -52,8 +54,11 @@ test.describe('EPUB : importer, lire, rouvrir', () => {
     await importFile(page, epub)
     await expect(workCard(page, EPUB_TITLE)).toBeVisible()
 
-    await importFile(page, epub)
-    await expect(page.getByText('déjà dans ta bibliothèque')).toBeVisible()
+    await importFile(page, epub, { keepOpen: true })
+    await expect(
+      page.getByRole('dialog', { name: 'Import' }).getByText('déjà dans ta bibliothèque'),
+    ).toBeVisible()
+    await page.keyboard.press('Escape')
     await expect(workCard(page, EPUB_TITLE)).toHaveCount(1)
   })
 })
@@ -186,7 +191,7 @@ test.describe('Supprimer un ouvrage', () => {
     await importFile(page, cbz)
     await expect(workCard(page, CBZ_TITLE)).toBeVisible()
 
-    await page.getByRole('button', { name: 'Sélectionner', exact: true }).click()
+    await page.getByRole('button', { name: 'Sélectionner des œuvres' }).click()
     await page.getByRole('checkbox', { name: `Sélectionner ${EPUB_TITLE}` }).click()
     await page.getByRole('checkbox', { name: `Sélectionner ${CBZ_TITLE}` }).click()
     const toolbar = page.getByRole('toolbar', { name: 'Actions sur la sélection' })

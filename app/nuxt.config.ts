@@ -58,6 +58,7 @@ export default defineNuxtConfig({
       scan: true,
       // Icônes internes de Nuxt UI (non détectées par le scan des sources).
       icons: [
+        'lucide:book-open',
         'lucide:check',
         'lucide:chevron-down',
         'lucide:chevron-left',
