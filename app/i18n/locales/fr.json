@@ -144,6 +144,65 @@
     "soon": {
       "title": "Lecteur en préparation",
       "description": "Les lecteurs EPUB et manga arrivent aux prochaines étapes."
+    },
+    "comic": {
+      "loading": "Ouverture du volume",
+      "volumeTitle": "{series} · vol. {volume}",
+      "close": "Fermer le lecteur",
+      "settings": "Réglages du lecteur",
+      "thumbnails": "Toutes les pages",
+      "thumbnailStrip": "Miniatures",
+      "goToPage": "Aller à la page {page}",
+      "pageAlt": "Page {page} sur {total}",
+      "pageCounter": "{page} / {total}",
+      "pageSlider": "Page",
+      "prev": "Page précédente",
+      "next": "Page suivante",
+      "loadingPage": "Chargement de la page {page}…",
+      "pageError": "Impossible d'afficher la page {page}.",
+      "retry": "Réessayer",
+      "layout": {
+        "label": "Mode de lecture",
+        "auto": "Automatique",
+        "autoHint": "Double page en paysage sur grand écran, simple page sinon.",
+        "single": "Simple page",
+        "double": "Double page",
+        "webtoon": "Webtoon"
+      },
+      "direction": {
+        "label": "Sens de lecture",
+        "ltr": "Gauche → droite",
+        "rtl": "Droite → gauche",
+        "ltrShort": "G → D",
+        "rtlShort": "D → G",
+        "toggle": "Sens de lecture : {value}",
+        "seriesHint": "Réglé pour toute la série.",
+        "error": "Impossible d'enregistrer le sens de lecture."
+      },
+      "fit": {
+        "label": "Ajustement",
+        "width": "Largeur",
+        "height": "Hauteur",
+        "screen": "Écran"
+      },
+      "end": {
+        "kicker": "Fin du volume {volume}",
+        "kickerNone": "Fin du volume",
+        "title": "À suivre : volume {volume}",
+        "titleNone": "Volume terminé",
+        "description": "Le volume suivant n'est pas encore dans ta bibliothèque.",
+        "inLibrary": "Dans ta bibliothèque",
+        "pages": "{n} page | {n} pages",
+        "nextVolume": "Volume suivant",
+        "backToSeries": "Retour à la série",
+        "backToPages": "Revenir aux pages"
+      },
+      "error": {
+        "title": "Impossible d'ouvrir ce volume",
+        "description": "Le cœur de lecture n'a pas répondu ({message}).",
+        "empty": "Ce volume ne contient aucune page lisible.",
+        "retry": "Réessayer"
+      }
     }
   },
   "cover": {
