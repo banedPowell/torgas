@@ -72,7 +72,9 @@
   },
   "resume": {
     "label": "Reprendre",
-    "action": "Reprendre la lecture de {title}"
+    "action": "Reprendre la lecture de {title}",
+    "open": "Ouvrir la fiche de {title}",
+    "dismiss": "Fermer la barre Reprendre"
   },
   "work": {
     "back": "Retour à la bibliothèque",

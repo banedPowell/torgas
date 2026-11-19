@@ -8,6 +8,7 @@ import {
   matchesFilters,
   pickResume,
   summarizeEntry,
+  visibleResume,
 } from '~/utils/library'
 import { nemo, sampleSeries, sampleWorks } from '../fixtures'
 
@@ -82,5 +83,16 @@ describe('library utils', () => {
       volumesTotal: 2,
       volumesFinished: 1,
     })
+  })
+
+  it("masque la reprise fermée tant qu'elle n'a pas été relue", () => {
+    const [bovary, horla] = sampleWorks
+    const dismissed = { id: bovary!.id, lastReadAt: bovary!.lastReadAt ?? null }
+    expect(visibleResume(bovary, null)).toBe(bovary)
+    expect(visibleResume(bovary, dismissed)).toBeUndefined()
+    expect(visibleResume(horla, dismissed)).toBe(horla)
+    const reread = { ...bovary!, lastReadAt: '2027-01-01T00:00:00.000Z' }
+    expect(visibleResume(reread, dismissed)).toBe(reread)
+    expect(visibleResume(undefined, dismissed)).toBeUndefined()
   })
 })

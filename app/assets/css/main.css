@@ -182,6 +182,26 @@
   --ui-text-highlighted: #d5cec0;
 }
 
+/*
+ * Les contrôles ne se sélectionnent pas au clic ou au double-clic. Les liens de texte et le
+ * contenu du lecteur (EPUB, pages) restent sélectionnables.
+ */
+button,
+[role='button'],
+[role='tab'],
+[role='menuitem'],
+[role='switch'],
+[role='radio'],
+[role='option'],
+summary,
+input[type='button'],
+input[type='submit'],
+label:has(> input[type='radio']),
+a[role='button'] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

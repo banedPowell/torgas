@@ -171,7 +171,7 @@ function openPicker() {
     </UDashboardPanel>
 
     <aside
-      v-if="isDesktop"
+      v-if="isDesktop && importItems.length"
       class="w-[340px] shrink-0 overflow-y-auto border-s border-default bg-muted px-5 py-6"
     >
       <ImportQueue
