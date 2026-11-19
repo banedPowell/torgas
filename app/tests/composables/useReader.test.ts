@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope } from 'vue'
 import { MemoryBridge } from '~/services/core/memory'
 import type { ReaderPosition } from '~/types/reader'
+import { readLocatorBackup, writeLocatorBackup } from '~/utils/locatorBackup'
 
 const { bridge } = vi.hoisted(() => ({ bridge: { current: null as MemoryBridge | null } }))
 
@@ -136,6 +137,31 @@ describe('useReader', () => {
     window.dispatchEvent(new Event('beforeunload'))
     await vi.advanceTimersByTimeAsync(0)
     expect((await core.getLocator(id))?.cfi).toBe('epubcfi(/6/9)')
+    stop()
+  })
+
+  it('reprend la copie locale d’une position que le cœur n’a pas reçue', async () => {
+    await core.saveLocator(id, { format: 'epub', cfi: 'epubcfi(/6/2)', progress: 0.2 })
+    // Rechargement pendant l'écriture : seule la copie synchrone connaît la dernière page.
+    const later = new Date(Date.now() + 1000)
+    writeLocatorBackup(id, { format: 'epub', cfi: 'epubcfi(/6/6)', progress: 0.6 }, later)
+    const { reader, stop } = mount(id)
+    await reader.load()
+    expect(reader.initialCfi.value).toBe('epubcfi(/6/6)')
+    expect((await core.getLocator(id))?.cfi).toBe('epubcfi(/6/6)')
+    expect((await core.getWork(id))?.progress).toBe(0.6)
+    expect(readLocatorBackup(id)).toBeNull()
+    stop()
+  })
+
+  it('flush se résout une fois la dernière position enregistrée', async () => {
+    const { reader, stop } = mount(id)
+    await reader.load()
+    reader.relocate(pos(1))
+    reader.relocate(pos(8))
+    await reader.flush()
+    expect((await core.getLocator(id))?.cfi).toBe('epubcfi(/6/8)')
+    expect((await core.getWork(id))?.progress).toBe(0.08)
     stop()
   })
 

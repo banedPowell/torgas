@@ -5,6 +5,7 @@ import type { CoreBridge } from '~/services/core/bridge'
 import { MemoryBridge } from '~/services/core/memory'
 import type { Work } from '~/types/core'
 import { COMIC_SETTINGS_KEY } from '~/composables/useComicSettings'
+import { clearLocatorBackup, readLocatorBackup, writeLocatorBackup } from '~/utils/locatorBackup'
 import { oneShot, svgPages, testSeries, volume1, volume2 } from '../comic-fixtures'
 
 const { bridge } = vi.hoisted(() => ({ bridge: { current: null as CoreBridge | null } }))
@@ -38,6 +39,7 @@ describe('useComicReader', () => {
 
   beforeEach(() => {
     localStorage.removeItem(COMIC_SETTINGS_KEY)
+    for (const id of [volume1.id, volume2.id, oneShot.id]) clearLocatorBackup(id)
     clearNuxtState()
     bridge.current = makeBridge()
   })
@@ -190,12 +192,33 @@ describe('useComicReader', () => {
   it('sauvegarde quand la page passe en arrière-plan', async () => {
     const { reader } = await open(oneShot)
     const spy = vi.spyOn(bridge.current!, 'saveLocator')
+    reader.goTo(1)
+    // Page suivante dans l'intervalle de 2 s : sa sauvegarde est différée…
     reader.goTo(2)
+    await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(1))
     spy.mockClear()
+    // … sauf si la page passe en arrière-plan : elle est écrite tout de suite.
     Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
     document.dispatchEvent(new Event('visibilitychange'))
     Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
-    expect(spy).toHaveBeenCalledWith(oneShot.id, { format: 'cbz', page: 2, progress: 0.6 })
+    await vi.waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(oneShot.id, { format: 'cbz', page: 2, progress: 0.6 }),
+    )
+  })
+
+  it('reprend la copie locale si la dernière page n’a pas atteint le cœur', async () => {
+    await bridge.current!.saveLocator(oneShot.id, { format: 'cbz', page: 1, progress: 0.4 })
+    // Page déchargée pendant l'écriture : seule la copie synchrone a la page 3.
+    const later = new Date(Date.now() + 1000)
+    writeLocatorBackup(oneShot.id, { format: 'cbz', page: 3, progress: 0.8 }, later)
+    const { reader } = await open(oneShot)
+    expect(reader.page.value).toBe(3)
+    expect(await bridge.current!.getLocator(oneShot.id)).toEqual({
+      format: 'cbz',
+      page: 3,
+      progress: 0.8,
+    })
+    expect(readLocatorBackup(oneShot.id)).toBeNull()
   })
 
   it('passe en erreur pour un volume sans pages', async () => {

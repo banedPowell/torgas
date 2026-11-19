@@ -16,6 +16,7 @@ import type {
   Work,
 } from '~/types/core'
 import { LruCache } from '~/utils/lru'
+import { createSerialQueue } from '~/utils/serial'
 import { uuidv7 } from '~/utils/uuid'
 
 /** Largeur maximale des miniatures de couverture (pixels). */
@@ -54,6 +55,13 @@ export class WebBridge implements CoreBridge {
   private wasm!: CoreWasm
   private db!: DbClient
   private persistRequested = false
+  /**
+   * Opérations sur la bibliothèque, une par une dans l'ordre d'appel. Le worker traite ses
+   * messages dans l'ordre, mais une opération en envoie souvent plusieurs (`saveLocator` :
+   * vérifier l'œuvre puis écrire) : sans cette file, une lecture appelée après une écriture
+   * pourrait passer entre ses messages et renvoyer l'état d'avant (#29).
+   */
+  private readonly queue = createSerialQueue()
   /** Blob URL des couvertures, par chemin OPFS. */
   private readonly covers = new Map<string, Promise<string | undefined>>()
   private readonly archives = new LruCache<string, Promise<CbzArchive>>(OPEN_ARCHIVES, (archive) =>
@@ -78,6 +86,131 @@ export class WebBridge implements CoreBridge {
       return { status: importErrorStatus(message), message }
     }
     if (analysis.drm) return { status: 'drm' }
+    return this.queue.run(() => this.store(analysis, bytes))
+  }
+
+  listWorks(): Promise<Work[]> {
+    return this.queue.run(() => this.queryWorks(Sql.LIST_WORKS))
+  }
+
+  getWork(id: string): Promise<Work | null> {
+    return this.queue.run(() => this.findWork(id))
+  }
+
+  listSeries(): Promise<Series[]> {
+    return this.queue.run(async () => (await this.db.query(Sql.LIST_SERIES)).map(Sql.seriesFromRow))
+  }
+
+  setStatus(id: string, status: ReadingStatus): Promise<void> {
+    return this.queue.run(async () => {
+      const rows = await this.db.query(Sql.SET_STATUS, [id, status, now()])
+      if (rows.length === 0) throw notFound('œuvre', id)
+    })
+  }
+
+  setSeriesDirection(seriesId: string, direction: ReadingDirection): Promise<void> {
+    return this.queue.run(async () => {
+      const rows = await this.db.query(Sql.SET_SERIES_DIRECTION, [seriesId, direction])
+      if (rows.length === 0) throw notFound('série', seriesId)
+    })
+  }
+
+  async getBookBytes(id: string): Promise<Uint8Array> {
+    const file = await readOpfsFile(await this.queue.run(() => this.filePath(id)))
+    return new Uint8Array(await file.arrayBuffer())
+  }
+
+  getPageUrl(id: string, page: number): Promise<string> {
+    const key = `${id}:${page}`
+    let url = this.pageUrls.get(key)
+    if (!url) {
+      url = this.openArchive(id).then((archive) => {
+        const { mime, bytes } = archive.page(page) as Page
+        return URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: mime }))
+      })
+      // Une page en échec n'est pas gardée : un nouvel essai relira l'archive.
+      url.catch(() => this.pageUrls.get(key) === url && this.pageUrls.delete(key))
+      this.pageUrls.set(key, url)
+    }
+    return url
+  }
+
+  getLocator(id: string): Promise<Locator | null> {
+    return this.queue.run(async () => {
+      const row = await this.db.first(Sql.GET_LOCATOR, [id])
+      return row ? Sql.locatorFromRow(row) : null
+    })
+  }
+
+  saveLocator(id: string, locator: Locator): Promise<void> {
+    return this.queue.run(async () => {
+      Sql.checkFraction('progression', locator.progress)
+      await this.requireWork(id)
+      const at = now()
+      await this.db.batch([
+        { sql: Sql.UPSERT_LOCATOR, params: [id, ...locatorParams(locator), at] },
+        { sql: Sql.UPDATE_PROGRESS, params: [id, locator.progress, at] },
+      ])
+    })
+  }
+
+  listBookmarks(id: string): Promise<Bookmark[]> {
+    return this.queue.run(async () =>
+      (await this.db.query(Sql.LIST_BOOKMARKS, [id])).map(Sql.bookmarkFromRow),
+    )
+  }
+
+  addBookmark(id: string, locator: Locator, label: string): Promise<Bookmark> {
+    return this.queue.run(async () => {
+      Sql.checkFraction('progression', locator.progress)
+      await this.requireWork(id)
+      const bookmark: Bookmark = {
+        id: uuidv7(),
+        workId: id,
+        locator: { ...locator },
+        label: label.trim(),
+        createdAt: now(),
+      }
+      await this.db.query(Sql.INSERT_BOOKMARK, [
+        bookmark.id,
+        id,
+        ...locatorParams(locator),
+        bookmark.label,
+        bookmark.createdAt,
+      ])
+      return bookmark
+    })
+  }
+
+  removeBookmark(bookmarkId: string): Promise<void> {
+    return this.queue.run(async () => {
+      const rows = await this.db.query(Sql.REMOVE_BOOKMARK, [bookmarkId])
+      if (rows.length === 0) throw notFound('marque-page', bookmarkId)
+    })
+  }
+
+  startSession(workId: string): Promise<string> {
+    return this.queue.run(async () => {
+      const work = await this.requireWork(workId)
+      const id = uuidv7()
+      await this.db.query(Sql.START_SESSION, [id, workId, now(), work.progress])
+      return id
+    })
+  }
+
+  endSession(sessionId: string, minutes: number, progress: number): Promise<void> {
+    return this.queue.run(async () => {
+      if (!Number.isFinite(minutes) || minutes < 0) {
+        throw new Error(`minutes invalides : ${minutes}`)
+      }
+      Sql.checkFraction('progression', progress)
+      const rows = await this.db.query(Sql.END_SESSION, [sessionId, now(), minutes, progress])
+      if (rows.length === 0) throw notFound('session', sessionId)
+    })
+  }
+
+  /** Enregistre un fichier analysé (dans la file : vérification du doublon puis insertion). */
+  private async store(analysis: Analysis, bytes: Uint8Array): Promise<ImportResult> {
     const existing = await this.findBySha256(analysis.sha256)
     if (existing) return { status: 'duplicate', work: existing }
 
@@ -99,108 +232,6 @@ export class WebBridge implements CoreBridge {
       return { status: 'error', message: errorMessage(error) }
     }
     return { status: 'imported', work: await this.requireWork(workId) }
-  }
-
-  async listWorks(): Promise<Work[]> {
-    return this.queryWorks(Sql.LIST_WORKS)
-  }
-
-  async getWork(id: string): Promise<Work | null> {
-    return (await this.queryWorks(Sql.GET_WORK, [id]))[0] ?? null
-  }
-
-  async listSeries(): Promise<Series[]> {
-    return (await this.db.query(Sql.LIST_SERIES)).map(Sql.seriesFromRow)
-  }
-
-  async setStatus(id: string, status: ReadingStatus): Promise<void> {
-    const rows = await this.db.query(Sql.SET_STATUS, [id, status, now()])
-    if (rows.length === 0) throw notFound('œuvre', id)
-  }
-
-  async setSeriesDirection(seriesId: string, direction: ReadingDirection): Promise<void> {
-    const rows = await this.db.query(Sql.SET_SERIES_DIRECTION, [seriesId, direction])
-    if (rows.length === 0) throw notFound('série', seriesId)
-  }
-
-  async getBookBytes(id: string): Promise<Uint8Array> {
-    const file = await readOpfsFile(await this.filePath(id))
-    return new Uint8Array(await file.arrayBuffer())
-  }
-
-  getPageUrl(id: string, page: number): Promise<string> {
-    const key = `${id}:${page}`
-    let url = this.pageUrls.get(key)
-    if (!url) {
-      url = this.openArchive(id).then((archive) => {
-        const { mime, bytes } = archive.page(page) as Page
-        return URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: mime }))
-      })
-      // Une page en échec n'est pas gardée : un nouvel essai relira l'archive.
-      url.catch(() => this.pageUrls.get(key) === url && this.pageUrls.delete(key))
-      this.pageUrls.set(key, url)
-    }
-    return url
-  }
-
-  async getLocator(id: string): Promise<Locator | null> {
-    const row = await this.db.first(Sql.GET_LOCATOR, [id])
-    return row ? Sql.locatorFromRow(row) : null
-  }
-
-  async saveLocator(id: string, locator: Locator): Promise<void> {
-    Sql.checkFraction('progression', locator.progress)
-    await this.requireWork(id)
-    const at = now()
-    await this.db.batch([
-      { sql: Sql.UPSERT_LOCATOR, params: [id, ...locatorParams(locator), at] },
-      { sql: Sql.UPDATE_PROGRESS, params: [id, locator.progress, at] },
-    ])
-  }
-
-  async listBookmarks(id: string): Promise<Bookmark[]> {
-    return (await this.db.query(Sql.LIST_BOOKMARKS, [id])).map(Sql.bookmarkFromRow)
-  }
-
-  async addBookmark(id: string, locator: Locator, label: string): Promise<Bookmark> {
-    Sql.checkFraction('progression', locator.progress)
-    await this.requireWork(id)
-    const bookmark: Bookmark = {
-      id: uuidv7(),
-      workId: id,
-      locator: { ...locator },
-      label: label.trim(),
-      createdAt: now(),
-    }
-    await this.db.query(Sql.INSERT_BOOKMARK, [
-      bookmark.id,
-      id,
-      ...locatorParams(locator),
-      bookmark.label,
-      bookmark.createdAt,
-    ])
-    return bookmark
-  }
-
-  async removeBookmark(bookmarkId: string): Promise<void> {
-    const rows = await this.db.query(Sql.REMOVE_BOOKMARK, [bookmarkId])
-    if (rows.length === 0) throw notFound('marque-page', bookmarkId)
-  }
-
-  async startSession(workId: string): Promise<string> {
-    const work = await this.requireWork(workId)
-    const id = uuidv7()
-    await this.db.query(Sql.START_SESSION, [id, workId, now(), work.progress])
-    return id
-  }
-
-  async endSession(sessionId: string, minutes: number, progress: number): Promise<void> {
-    if (!Number.isFinite(minutes) || minutes < 0) {
-      throw new Error(`minutes invalides : ${minutes}`)
-    }
-    Sql.checkFraction('progression', progress)
-    const rows = await this.db.query(Sql.END_SESSION, [sessionId, now(), minutes, progress])
-    if (rows.length === 0) throw notFound('session', sessionId)
   }
 
   private insertStatements(
@@ -295,8 +326,12 @@ export class WebBridge implements CoreBridge {
     return (await this.queryWorks(Sql.FIND_BY_SHA256, [sha256]))[0] ?? null
   }
 
+  private async findWork(id: string): Promise<Work | null> {
+    return (await this.queryWorks(Sql.GET_WORK, [id]))[0] ?? null
+  }
+
   private async requireWork(id: string): Promise<Work> {
-    const work = await this.getWork(id)
+    const work = await this.findWork(id)
     if (!work) throw notFound('œuvre', id)
     return work
   }

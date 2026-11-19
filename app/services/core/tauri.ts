@@ -9,6 +9,7 @@ import type {
   Series,
   Work,
 } from '~/types/core'
+import { createSerialQueue } from '~/utils/serial'
 
 /** Schéma du protocole custom servi par `src-tauri/src/protocol.rs`. */
 const SCHEME = 'torgas'
@@ -72,36 +73,51 @@ function toBytes(buffer: ArrayBuffer | Uint8Array | number[]): Uint8Array {
  * Cœur de la version desktop : commandes Rust (`src-tauri/src/commands.rs`) via `invoke`, fichiers
  * dans `~/Torgas/`, SQLite natif. Les octets voyagent en binaire brut (import, lecture d'un
  * livre) ; les pages CBZ et les couvertures passent par le protocole `torgas://`, hors IPC.
+ *
+ * Les commandes Rust sont asynchrones (`spawn_blocking`) : deux `invoke` successifs peuvent
+ * s'exécuter dans le désordre. Les opérations sur la bibliothèque passent donc par une file,
+ * dans l'ordre d'appel, pour qu'une lecture suive toujours l'écriture appelée avant elle (#29).
  */
 export class TauriBridge implements CoreBridge {
+  private readonly queue = createSerialQueue()
+
+  /** Commande sur la bibliothèque, exécutée après celles appelées avant elle. */
+  private ordered<T>(
+    command: string,
+    args?: Parameters<typeof invoke>[1],
+    options?: Parameters<typeof invoke>[2],
+  ): Promise<T> {
+    return this.queue.run(() => call<T>(command, args, options))
+  }
+
   async init(): Promise<void> {}
 
   async importFile(name: string, bytes: Uint8Array): Promise<ImportResult> {
-    const result = await call<ImportResult>('import_file', bytes, {
+    const result = await this.ordered<ImportResult>('import_file', bytes, {
       headers: { 'X-Torgas-Name': encodeURIComponent(name) },
     })
     return result.work ? { ...result, work: withCoverUrl(result.work) } : result
   }
 
   async listWorks(): Promise<Work[]> {
-    return (await call<Work[]>('list_works')).map(withCoverUrl)
+    return (await this.ordered<Work[]>('list_works')).map(withCoverUrl)
   }
 
   async getWork(id: string): Promise<Work | null> {
-    const work = await call<Work | null>('get_work', { id })
+    const work = await this.ordered<Work | null>('get_work', { id })
     return work ? withCoverUrl(work) : null
   }
 
   listSeries(): Promise<Series[]> {
-    return call('list_series')
+    return this.ordered('list_series')
   }
 
   setStatus(id: string, status: ReadingStatus): Promise<void> {
-    return call('set_status', { id, status })
+    return this.ordered('set_status', { id, status })
   }
 
   setSeriesDirection(seriesId: string, direction: ReadingDirection): Promise<void> {
-    return call('set_series_direction', { seriesId, direction })
+    return this.ordered('set_series_direction', { seriesId, direction })
   }
 
   async getBookBytes(id: string): Promise<Uint8Array> {
@@ -113,31 +129,31 @@ export class TauriBridge implements CoreBridge {
   }
 
   getLocator(id: string): Promise<Locator | null> {
-    return call('get_locator', { id })
+    return this.ordered('get_locator', { id })
   }
 
   saveLocator(id: string, locator: Locator): Promise<void> {
-    return call('save_locator', { id, locator })
+    return this.ordered('save_locator', { id, locator })
   }
 
   listBookmarks(id: string): Promise<Bookmark[]> {
-    return call('list_bookmarks', { id })
+    return this.ordered('list_bookmarks', { id })
   }
 
   addBookmark(id: string, locator: Locator, label: string): Promise<Bookmark> {
-    return call('add_bookmark', { id, locator, label })
+    return this.ordered('add_bookmark', { id, locator, label })
   }
 
   removeBookmark(bookmarkId: string): Promise<void> {
-    return call('remove_bookmark', { bookmarkId })
+    return this.ordered('remove_bookmark', { bookmarkId })
   }
 
   startSession(workId: string): Promise<string> {
-    return call('start_session', { workId })
+    return this.ordered('start_session', { workId })
   }
 
   endSession(sessionId: string, minutes: number, progress: number): Promise<void> {
-    return call('end_session', { sessionId, minutes, progress })
+    return this.ordered('end_session', { sessionId, minutes, progress })
   }
 }
 

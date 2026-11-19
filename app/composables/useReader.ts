@@ -18,8 +18,9 @@ function message(e: unknown): string {
 
 /**
  * Lecture d'une œuvre : chargement du fichier et de la dernière position, sauvegarde du
- * locator (au plus toutes les 5 s, puis à la mise en arrière-plan, à la fermeture et au
- * démontage), marque-pages. Le composant de rendu ne fait que relayer le moteur (foliate).
+ * locator (au plus toutes les 5 s, puis tout de suite à la mise en arrière-plan, en quittant
+ * le lecteur et au démontage, voir `useLocatorSaver`), marque-pages. Le composant de rendu ne
+ * fait que relayer le moteur (foliate).
  */
 export function useReader(workId: MaybeRefOrGetter<string>) {
   const core = useCore()
@@ -33,8 +34,7 @@ export function useReader(workId: MaybeRefOrGetter<string>) {
   const position = shallowRef<ReaderPosition | null>(null)
   const bookmarks = shallowRef<Bookmark[]>([])
 
-  let pending: Locator | null = null
-  let lastSavedCfi: string | null = null
+  const saver = useLocatorSaver(workId, { interval: LOCATOR_SAVE_INTERVAL })
 
   async function load(): Promise<void> {
     const id = toValue(workId)
@@ -51,12 +51,12 @@ export function useReader(workId: MaybeRefOrGetter<string>) {
         core.getLocator(id),
         core.listBookmarks(id),
       ])
+      const resume = await saver.restore(locator, found.lastReadAt)
       work.value = found
       file.value = new File([bytes as Uint8Array<ArrayBuffer>], `${found.title}.${found.format}`, {
         type: MIME[found.format],
       })
-      initialCfi.value = locator?.cfi ?? null
-      lastSavedCfi = initialCfi.value
+      initialCfi.value = resume?.cfi ?? null
       bookmarks.value = sortBookmarks(marks)
       state.value = 'ready'
     } catch (e) {
@@ -70,40 +70,14 @@ export function useReader(workId: MaybeRefOrGetter<string>) {
     state.value = 'error'
   }
 
-  async function persist(): Promise<void> {
-    const locator = pending
-    pending = null
-    if (!locator || locator.cfi === lastSavedCfi) return
-    lastSavedCfi = locator.cfi ?? null
-    try {
-      await core.saveLocator(toValue(workId), locator)
-    } catch {
-      // Nouvelle tentative au prochain déplacement.
-      lastSavedCfi = null
-    }
-  }
-
-  const persistThrottled = useThrottleFn(persist, LOCATOR_SAVE_INTERVAL, true, true)
-
   /** Appelé par le moteur à chaque changement de page. */
   function relocate(next: ReaderPosition): void {
     position.value = next
-    pending = { format: work.value?.format ?? 'epub', cfi: next.cfi, progress: next.progress }
-    void persistThrottled()
+    saver.track({ format: work.value?.format ?? 'epub', cfi: next.cfi, progress: next.progress })
   }
 
-  /** Sauvegarde immédiate de la dernière position connue. */
-  function flush(): Promise<void> {
-    return persist()
-  }
-
-  if (import.meta.client) {
-    useEventListener(document, 'visibilitychange', () => {
-      if (document.visibilityState === 'hidden') void flush()
-    })
-    useEventListener(window, 'beforeunload', () => void flush())
-  }
-  tryOnScopeDispose(() => void flush())
+  /** Sauvegarde immédiate de la dernière position connue, résolue une fois enregistrée. */
+  const flush = saver.flush
 
   const currentBookmark = computed(() => {
     const cfi = position.value?.cfi
