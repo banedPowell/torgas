@@ -57,6 +57,7 @@ const kicker = computed(() =>
       </div>
       <UButton
         :to="`/read/${nextVolume.id}`"
+        replace
         size="xl"
         block
         class="h-13 rounded-xl text-base"

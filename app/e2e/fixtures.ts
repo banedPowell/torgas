@@ -109,16 +109,20 @@ export function makePng(rgb: [number, number, number], width = 64, height = 96):
   ])
 }
 
-/** CBZ de 6 pages PNG (`page-01.png`…), chacune d'une couleur distincte. */
-export function makeCbz(): Fixture {
+/**
+ * CBZ de 6 pages PNG (`page-01.png`…), chacune d'une couleur distincte. `tint` décale les
+ * couleurs : deux CBZ de même nom de série mais de contenu différent (le doublon se détecte
+ * par empreinte).
+ */
+export function makeCbz(name = `${CBZ_TITLE}.cbz`, tint = 0): Fixture {
   const files: Zippable = {}
   for (let i = 0; i < CBZ_PAGES; i++) {
-    const shade = 40 + i * 35
+    const shade = 40 + i * 35 + tint
     const png = makePng([shade, 255 - shade, (shade * 3) % 256])
     files[`page-${String(i + 1).padStart(2, '0')}.png`] = [png, { level: 0 }]
   }
   return {
-    name: `${CBZ_TITLE}.cbz`,
+    name,
     mimeType: 'application/vnd.comicbook+zip',
     buffer: Buffer.from(zipSync(files)),
   }

@@ -212,6 +212,11 @@
       "title": "Œuvre introuvable",
       "description": "Elle a peut-être été retirée de ta bibliothèque."
     },
+    "loadError": {
+      "title": "Impossible d'ouvrir l'œuvre",
+      "description": "Le cœur de lecture n'a pas répondu ({message}).",
+      "retry": "Réessayer"
+    },
     "unreadable": {
       "title": "Impossible d'ouvrir ce livre",
       "description": "Le fichier est peut-être endommagé ou dans un format non pris en charge."
