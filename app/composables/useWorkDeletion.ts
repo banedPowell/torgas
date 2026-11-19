@@ -7,7 +7,8 @@ export type DeletableWork = Pick<Work, 'id' | 'title'>
 /**
  * Suppression d'œuvres de la bibliothèque (une depuis la fiche, plusieurs depuis le mode
  * sélection) : un seul appel au cœur pour tout le lot, puis mise à jour de la bibliothèque
- * (la barre « Reprendre » suit), copies locales de position effacées et toast de confirmation.
+ * (la barre « Reprendre » suit) et copies locales de position effacées. Pas de toast de
+ * confirmation : l'œuvre disparaît de l'écran ; seule une erreur est signalée.
  */
 export function useWorkDeletion() {
   const core = useCore()
@@ -25,15 +26,8 @@ export function useWorkDeletion() {
     try {
       await core.deleteWorks(ids)
       for (const id of ids) clearLocatorBackup(id)
+      forgetVolumeChapters(ids)
       library.forget(ids)
-      toast.add({
-        title:
-          works.length === 1
-            ? t('deletion.done', { title: works[0]!.title })
-            : t('deletion.doneMany', { n: works.length }),
-        icon: 'i-lucide-circle-check',
-        color: 'success',
-      })
       return true
     } catch (e) {
       toast.add({

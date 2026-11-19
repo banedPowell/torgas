@@ -8,6 +8,13 @@ const { work, state, error, load } = useReaderWork(id)
 
 // Ouverture à un chapitre précis depuis la fiche (`?at=<cible foliate>`), une seule fois.
 const startAt = computed(() => (typeof route.query.at === 'string' ? route.query.at : undefined))
+// Ouverture d'un volume à la première page d'un chapitre (`?page=<n>`, à partir de 0).
+const startPage = computed(() => {
+  const page = Number(route.query.page)
+  return typeof route.query.page === 'string' && Number.isInteger(page) && page >= 0
+    ? page
+    : undefined
+})
 
 // Manga en EPUB fait de pages-images : lecteur de planches, comme un CBZ. Un manga importé
 // avant que ses pages soient comptées les fait compter (0 : il reste lu comme un livre).
@@ -68,7 +75,13 @@ defineShortcuts(computed(() => (work.value ? {} : { escape: close })))
       <UButton icon="i-lucide-library" :label="$t('reader.back')" to="/" />
     </EmptyState>
   </div>
-  <LazyReaderComic v-else-if="asComic" :key="work.id" :work="work" @close="close" />
+  <LazyReaderComic
+    v-else-if="asComic"
+    :key="work.id"
+    :work="work"
+    :start-page="startPage"
+    @close="close"
+  />
   <LazyReaderEpub
     v-else-if="work.format === 'epub'"
     :key="work.id"

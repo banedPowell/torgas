@@ -7,6 +7,7 @@ import type {
   ReadingDirection,
   ReadingStatus,
   Series,
+  VolumeChapter,
   Work,
 } from '~/types/core'
 import { createSerialQueue } from '~/utils/serial'
@@ -130,6 +131,10 @@ export class TauriBridge implements CoreBridge {
 
   getPageCount(id: string): Promise<number> {
     return this.ordered('get_page_count', { id })
+  }
+
+  getVolumeChapters(id: string): Promise<VolumeChapter[]> {
+    return this.ordered('get_volume_chapters', { id })
   }
 
   async getPageUrl(id: string, page: number): Promise<string> {

@@ -19,10 +19,11 @@ export function useWork(id: MaybeRefOrGetter<string>) {
   const saving = ref(false)
   let request = 0
 
-  async function load(): Promise<void> {
+  /** Charge la fiche ; `quiet` la rafraîchit sans repasser par l'état de chargement. */
+  async function load(options: { quiet?: boolean } = {}): Promise<void> {
     const requested = toValue(id)
     const current = ++request
-    state.value = 'loading'
+    if (!options.quiet) state.value = 'loading'
     error.value = null
     try {
       let resolved: WorkTarget | null
@@ -44,7 +45,11 @@ export function useWork(id: MaybeRefOrGetter<string>) {
     }
   }
 
-  watch(() => toValue(id), load, { immediate: true })
+  watch(
+    () => toValue(id),
+    () => load(),
+    { immediate: true },
+  )
 
   const work = computed(() => (target.value?.kind === 'work' ? target.value.work : null))
   const series = computed(() => (target.value?.kind === 'series' ? target.value.series : null))
@@ -52,14 +57,19 @@ export function useWork(id: MaybeRefOrGetter<string>) {
   const seriesWorks = computed(() => (target.value?.kind === 'series' ? target.value.works : []))
   const split = computed(() => splitSeriesWorks(seriesWorks.value))
   const volumes = computed(() => split.value.volumes)
-  const chapters = computed(() => split.value.chapters)
+  // Chapitres : fichiers à part, et chapitres retrouvés dans les volumes (`109-00.jpg`…).
+  const volumeChapters = useVolumeChapters(volumes)
+  const chapters = computed(() => [
+    ...split.value.chapters,
+    ...seriesInnerChapters(volumes.value, volumeChapters.value, split.value.chapters),
+  ])
   const isSeries = computed(() => target.value?.kind === 'series')
   /** Volumes ou chapitres : la bascule n'apparaît que si la série a les deux. */
   const view = ref<SeriesView>('volumes')
   const hasBothViews = computed(() => volumes.value.length > 0 && chapters.value.length > 0)
   watch(
     () => series.value?.id,
-    () => (view.value = defaultSeriesView(volumes.value, chapters.value)),
+    () => (view.value = defaultSeriesView(volumes.value, split.value.chapters)),
     { immediate: true },
   )
   const viewWorks = computed(() => (view.value === 'chapters' ? chapters.value : volumes.value))
@@ -108,11 +118,6 @@ export function useWork(id: MaybeRefOrGetter<string>) {
     try {
       await core.setStatus(current.id, value)
       target.value = { kind: 'work', work: { ...current, status: value } }
-      toast.add({
-        title: t('work.status.updated', { status: t(`status.${value}`) }),
-        icon: 'i-lucide-circle-check',
-        color: 'success',
-      })
       refreshLibrary()
       return true
     } catch (e) {
@@ -137,11 +142,6 @@ export function useWork(id: MaybeRefOrGetter<string>) {
     try {
       await core.setSeriesDirection(current.series.id, value)
       target.value = { ...current, series: { ...current.series, direction: value } }
-      toast.add({
-        title: t('work.direction.updated', { direction: t(`work.direction.${value}`) }),
-        icon: 'i-lucide-circle-check',
-        color: 'success',
-      })
       return true
     } catch (e) {
       toast.add({

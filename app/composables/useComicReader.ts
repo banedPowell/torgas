@@ -19,6 +19,8 @@ import type { LoadState } from './useLibrary'
 export const COMIC_SAVE_INTERVAL = 2000
 
 export interface ComicReaderOptions {
+  /** Page d'ouverture (à partir de 0), à la place de la position enregistrée. */
+  startPage?: number
   /** Taille de la fenêtre ; par défaut celle du navigateur. */
   viewport?: Ref<{ width: number; height: number }>
 }
@@ -205,7 +207,7 @@ export function useComicReader(work: MaybeRefOrGetter<Work>, options: ComicReade
             : null
       const last = await saver.restore(stored, fresh?.lastReadAt)
       const resume = last ? (last.page ?? comicPageFromProgress(last.progress, count)) : 0
-      anchor.value = clampComicPage(resume, count)
+      anchor.value = clampComicPage(options.startPage ?? resume, count)
       state.value = 'ready'
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)

@@ -158,6 +158,12 @@ impl<B: AsRef<[u8]>> CbzArchive<B> {
         self.pages.iter().map(|page| page.name.clone()).collect()
     }
 
+    /// Chapitres contenus dans le volume, d'après le nom de ses pages (voir
+    /// [`crate::contents::chapters_from_pages`]).
+    pub fn chapters(&self) -> Vec<crate::contents::VolumeChapter> {
+        crate::contents::chapters_from_pages(&self.page_names())
+    }
+
     /// Extrait la page `n` (à partir de 0).
     pub fn page(&mut self, n: usize) -> Result<Page> {
         let entry = self.pages.get(n).ok_or(CoreError::PageOutOfRange {

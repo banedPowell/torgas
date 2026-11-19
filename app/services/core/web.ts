@@ -13,6 +13,7 @@ import type {
   ReadingDirection,
   ReadingStatus,
   Series,
+  VolumeChapter,
   Work,
 } from '~/types/core'
 import { LruCache } from '~/utils/lru'
@@ -148,6 +149,19 @@ export class WebBridge implements CoreBridge {
 
   async getPageCount(id: string): Promise<number> {
     return (await this.openArchive(id)).pageCount()
+  }
+
+  async getVolumeChapters(id: string): Promise<VolumeChapter[]> {
+    // Archive ouverte pour l'occasion, puis libérée : la fiche d'une série peut en parcourir
+    // beaucoup, on ne les garde pas toutes en mémoire.
+    const cached = this.archives.get(id)
+    if (cached) return (await cached).chapters() as VolumeChapter[]
+    const archive = new this.wasm.CbzArchive(await this.getBookBytes(id))
+    try {
+      return archive.chapters() as VolumeChapter[]
+    } finally {
+      archive.free()
+    }
   }
 
   getPageUrl(id: string, page: number): Promise<string> {

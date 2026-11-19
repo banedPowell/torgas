@@ -43,8 +43,8 @@ describe('useWorkDeletion', () => {
     expect(library.works.value.map((w) => w.id)).not.toContain('bovary')
     expect(library.resume.value?.id).not.toBe('bovary')
     expect(readLocatorBackup('bovary')).toBeNull()
-    expect(toasts).toEqual([expect.objectContaining({ color: 'success' })])
-    expect(toasts[0]!.title).toContain('Madame Bovary')
+    // Pas de toast de confirmation : l'œuvre disparaît de l'écran.
+    expect(toasts).toEqual([])
 
     // Le temps de lecture reste acquis : la session est gardée, détachée de l'œuvre.
     expect(bridge.current!.sessionsOf(null)).toEqual([
@@ -64,7 +64,7 @@ describe('useWorkDeletion', () => {
     expect(library.series.value).toEqual([])
     expect(await bridge.current!.listSeries()).toEqual([])
     expect(library.works.value).toHaveLength(3)
-    expect(toasts[0]!.title).toContain('2')
+    expect(toasts).toEqual([])
   })
 
   it('signale une erreur sans toucher à la bibliothèque', async () => {

@@ -12,7 +12,10 @@ const props = defineProps<{
   titleHidden?: boolean
 }>()
 
+const emit = defineEmits<{ remove: [work: Work] }>()
+
 const { t } = useI18n()
+const itemMenu = useWorkItemMenu()
 
 function state(work: Work): string {
   if (work.status === 'finished' || work.progress >= 1) return t('work.volumes.finished')
@@ -59,63 +62,73 @@ const incomplete = computed(() =>
           </div>
         </div>
 
-        <NuxtLink
-          v-else
-          :to="`/read/${row.work.id}`"
-          :aria-label="`${volumeLabel(row)} · ${$t(`format.${row.work.format}`)} · ${state(row.work)}`"
-          :class="[
-            'flex min-h-16 items-center gap-3.5 rounded-md px-2 py-2.5 text-highlighted hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary',
-            row.work.id === nextId ? 'my-1 bg-elevated ring-1 ring-primary ring-inset' : '',
-          ]"
-        >
-          <div
-            aria-hidden="true"
-            :class="[
-              'flex h-[54px] w-[38px] shrink-0 items-center justify-center rounded-sm font-display text-lg',
-              row.work.status === 'finished'
-                ? 'bg-inverted text-inverted'
-                : 'bg-accented text-highlighted',
-            ]"
+        <div v-else class="flex items-center gap-1">
+          <UContextMenu
+            :items="itemMenu(row.work, () => emit('remove', row.work))"
+            class="min-w-0 flex-1"
           >
-            {{ row.number ?? '·' }}
-          </div>
-          <div class="flex min-w-0 flex-1 flex-col gap-1">
-            <span
-              v-if="row.work.id === nextId"
-              class="font-mono text-[11px] tracking-wider text-primary uppercase"
+            <NuxtLink
+              :to="`/read/${row.work.id}`"
+              :aria-label="`${volumeLabel(row)} · ${$t(`format.${row.work.format}`)} · ${state(row.work)}`"
+              :class="[
+                'flex min-h-16 min-w-0 flex-1 items-center gap-3.5 rounded-md px-2 py-2.5 text-highlighted hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary',
+                row.work.id === nextId ? 'my-1 bg-elevated ring-1 ring-primary ring-inset' : '',
+              ]"
             >
-              {{ $t('work.volumes.next') }}
-            </span>
-            <span class="flex min-w-0 items-center gap-2">
-              <span class="truncate text-[15px] font-semibold">{{ volumeLabel(row) }}</span>
-              <WorkFormatBadge :format="row.work.format" />
-            </span>
-            <span class="truncate text-xs text-muted">
-              {{ state(row.work) }} · {{ formatBytes(row.work.sizeBytes) }}
-            </span>
-            <UProgress
-              v-if="row.work.progress > 0 && row.work.status !== 'finished'"
-              :model-value="Math.round(row.work.progress * 100)"
-              size="2xs"
-              :aria-label="
-                $t('library.entry.progress', { percent: formatPercent(row.work.progress) })
-              "
-            />
-          </div>
-          <UIcon
-            v-if="row.work.status === 'finished'"
-            name="i-lucide-check"
-            class="size-5 shrink-0 text-primary"
-            :aria-label="$t('work.volumes.finished')"
-            role="img"
+              <div
+                aria-hidden="true"
+                :class="[
+                  'flex h-[54px] w-[38px] shrink-0 items-center justify-center rounded-sm font-display text-lg',
+                  row.work.status === 'finished'
+                    ? 'bg-inverted text-inverted'
+                    : 'bg-accented text-highlighted',
+                ]"
+              >
+                {{ row.number ?? '·' }}
+              </div>
+              <div class="flex min-w-0 flex-1 flex-col gap-1">
+                <span
+                  v-if="row.work.id === nextId"
+                  class="font-mono text-[11px] tracking-wider text-primary uppercase"
+                >
+                  {{ $t('work.volumes.next') }}
+                </span>
+                <span class="flex min-w-0 items-center gap-2">
+                  <span class="truncate text-[15px] font-semibold">{{ volumeLabel(row) }}</span>
+                  <WorkFormatBadge :format="row.work.format" />
+                </span>
+                <span class="truncate text-xs text-muted">
+                  {{ state(row.work) }} · {{ formatBytes(row.work.sizeBytes) }}
+                </span>
+                <UProgress
+                  v-if="row.work.progress > 0 && row.work.status !== 'finished'"
+                  :model-value="Math.round(row.work.progress * 100)"
+                  size="2xs"
+                  :aria-label="
+                    $t('library.entry.progress', { percent: formatPercent(row.work.progress) })
+                  "
+                />
+              </div>
+              <UIcon
+                v-if="row.work.status === 'finished'"
+                name="i-lucide-check"
+                class="size-5 shrink-0 text-primary"
+                :aria-label="$t('work.volumes.finished')"
+                role="img"
+              />
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-5 shrink-0 text-dimmed"
+                aria-hidden="true"
+              />
+            </NuxtLink>
+          </UContextMenu>
+          <WorkItemMenu
+            :work="row.work"
+            :label="volumeLabel(row)"
+            @remove="emit('remove', $event)"
           />
-          <UIcon
-            v-else
-            name="i-lucide-chevron-right"
-            class="size-5 shrink-0 text-dimmed"
-            aria-hidden="true"
-          />
-        </NuxtLink>
+        </div>
       </li>
     </ul>
 

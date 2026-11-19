@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Work } from '~/types/core'
 import type { SeriesChapterRow } from '~/types/work'
 import type { ChapterFilter, ChapterGap, ChapterOrder } from '~/utils/seriesChapters'
 import type { Rect, Virtualizer } from '@tanstack/vue-virtual'
@@ -22,6 +23,7 @@ const props = defineProps<{
   titleHidden?: boolean
 }>()
 
+const emit = defineEmits<{ remove: [work: Work] }>()
 const query = defineModel<string>('query', { default: '' })
 const order = defineModel<ChapterOrder>('order', { default: 'asc' })
 const filter = defineModel<ChapterFilter>('filter', { default: 'all' })
@@ -216,7 +218,11 @@ const incomplete = computed(() => {
         :style="{ height: `${height(row)}px` }"
         :class="row.kind === 'group' ? '' : 'border-b border-default last:border-b-0'"
       >
-        <WorkSeriesChapterRow :row="row" :next="row.kind === 'chapter' && row.work.id === nextId" />
+        <WorkSeriesChapterRow
+          :row="row"
+          :next="row.kind === 'chapter' && row.work.id === nextId"
+          @remove="emit('remove', $event)"
+        />
       </li>
     </ol>
 

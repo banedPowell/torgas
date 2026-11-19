@@ -12,6 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use lru::LruCache;
 use serde::Serialize;
+use torgas_core::contents::VolumeChapter;
 use torgas_core::db::{ImportOptions, ImportOutcome, Library};
 use torgas_core::thumbnail::{self, MAX_THUMBNAIL_WIDTH};
 use torgas_core::{
@@ -218,6 +219,13 @@ impl Desktop {
             .file_path(id)?
             .map(PathBuf::from)
             .ok_or_else(|| DesktopError::MissingFile(id.to_owned()))
+    }
+
+    /// Chapitres contenus dans un volume, d'après le nom de ses pages.
+    pub fn volume_chapters(&self, work_id: &str) -> Result<Vec<VolumeChapter>> {
+        let archive = self.archive(work_id)?;
+        let archive = archive.lock()?;
+        Ok(archive.chapters())
     }
 
     /// Nombre de pages lisibles une à une (CBZ, ou manga EPUB fait d'images ; 0 sinon).

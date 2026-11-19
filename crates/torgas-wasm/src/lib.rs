@@ -116,6 +116,12 @@ impl CbzArchive {
         to_js(&self.inner.page(n)?)
     }
 
+    /// Chapitres contenus dans le volume, d'après le nom de ses pages :
+    /// `[{ number, page, title? }]`.
+    pub fn chapters(&self) -> Result<JsValue, JsError> {
+        to_js(&self.inner.chapters())
+    }
+
     /// Chemins des pages dans l'archive, dans l'ordre de lecture.
     #[wasm_bindgen(js_name = pageNames)]
     pub fn page_names(&self) -> Vec<String> {

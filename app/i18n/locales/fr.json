@@ -111,14 +111,12 @@
     },
     "status": {
       "label": "Statut de lecture",
-      "updated": "Statut mis à jour : {status}",
       "error": "Impossible de changer le statut"
     },
     "direction": {
       "label": "Sens de lecture",
       "ltr": "Gauche → droite",
       "rtl": "Droite → gauche",
-      "updated": "Sens de lecture : {direction}",
       "error": "Impossible de changer le sens de lecture"
     },
     "details": {
@@ -208,6 +206,10 @@
   "deletion": {
     "menu": "Plus d'actions",
     "action": "Supprimer de la bibliothèque",
+    "volume": "Supprimer ce volume",
+    "chapter": "Supprimer ce chapitre",
+    "itemMenu": "Actions : {label}",
+    "itemDescription": "Le fichier, ta position et tes marque-pages disparaissent de cet appareil. Le reste de la série est gardé, et ton temps de lecture reste acquis.",
     "title": "Supprimer « {title} » ?",
     "description": "La fiche, le fichier, ta position et tes marque-pages disparaissent de cet appareil. Ton temps de lecture reste acquis.",
     "seriesDescription": "{items} de la série, son fichier, ta position et tes marque-pages disparaissent de cet appareil. Ton temps de lecture reste acquis. | {items} de la série, leurs fichiers, tes positions et tes marque-pages disparaissent de cet appareil. Ton temps de lecture reste acquis.",
@@ -225,8 +227,6 @@
     "cancel": "Annuler",
     "confirm": "Supprimer",
     "confirmMany": "Supprimer | Supprimer les {n}",
-    "done": "« {title} » supprimé de la bibliothèque",
-    "doneMany": "{n} ouvrages supprimés de la bibliothèque",
     "error": "Impossible de supprimer"
   },
   "reader": {
@@ -395,7 +395,6 @@
     "globalLabel": "Progression globale de l'import",
     "cancel": "Annuler",
     "clear": "Effacer la liste",
-    "toast": "{n} œuvre importée | {n} œuvres importées",
     "state": {
       "pending": "En attente",
       "reading": "Lecture du fichier…",
