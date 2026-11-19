@@ -4,7 +4,7 @@ definePageMeta({ layout: 'reader' })
 const route = useRoute()
 const router = useRouter()
 const id = computed(() => String(route.params.id))
-const { work, state } = useWork(id)
+const { work, state, error, load } = useReaderWork(id)
 
 function close() {
   if (window.history.state?.back) router.back()
@@ -16,8 +16,24 @@ defineShortcuts(computed(() => (work.value ? {} : { escape: close })))
 </script>
 
 <template>
-  <div v-if="state === 'idle' || state === 'loading'" class="flex flex-1 flex-col">
+  <div v-if="state === 'loading'" class="flex flex-1 flex-col">
     <ReaderSkeleton />
+  </div>
+  <div v-else-if="state === 'error'" class="flex flex-1 items-center justify-center">
+    <EmptyState
+      icon="i-lucide-book-x"
+      :title="$t('reader.loadError.title')"
+      :description="$t('reader.loadError.description', { message: error })"
+    >
+      <UButton icon="i-lucide-rotate-cw" :label="$t('reader.loadError.retry')" @click="load()" />
+      <UButton
+        icon="i-lucide-library"
+        color="neutral"
+        variant="outline"
+        :label="$t('reader.back')"
+        to="/"
+      />
+    </EmptyState>
   </div>
   <div v-else-if="!work" class="flex flex-1 items-center justify-center">
     <EmptyState
@@ -28,6 +44,11 @@ defineShortcuts(computed(() => (work.value ? {} : { escape: close })))
       <UButton icon="i-lucide-library" :label="$t('reader.back')" to="/" />
     </EmptyState>
   </div>
-  <LazyReaderEpub v-else-if="work.format === 'epub'" :work-id="work.id" @close="close" />
-  <LazyReaderComic v-else-if="work.format === 'cbz'" :work="work" @close="close" />
+  <LazyReaderEpub
+    v-else-if="work.format === 'epub'"
+    :key="work.id"
+    :work-id="work.id"
+    @close="close"
+  />
+  <LazyReaderComic v-else-if="work.format === 'cbz'" :key="work.id" :work="work" @close="close" />
 </template>
