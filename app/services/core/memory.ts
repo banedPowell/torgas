@@ -41,10 +41,13 @@ export class MemoryBridge implements CoreBridge {
   private locators = new Map<string, Locator>()
   private bookmarks = new Map<string, Bookmark>()
   private sessions = new Map<string, Session>()
+  private pages = new Map<string, string[]>()
 
-  constructor(seed: { works?: Work[]; series?: Series[] } = {}) {
+  /** `pages` : URL des pages CBZ par œuvre (images générées pour les tests et le développement). */
+  constructor(seed: { works?: Work[]; series?: Series[]; pages?: Record<string, string[]> } = {}) {
     for (const s of seed.series ?? []) this.series.set(s.id, { ...s })
     for (const w of seed.works ?? []) this.works.set(w.id, { ...w, authors: [...w.authors] })
+    for (const [id, urls] of Object.entries(seed.pages ?? {})) this.pages.set(id, [...urls])
   }
 
   async init(): Promise<void> {}
@@ -107,7 +110,9 @@ export class MemoryBridge implements CoreBridge {
 
   async getPageUrl(id: string, page: number): Promise<string> {
     this.requireWork(id)
-    throw new Error(`Pages non disponibles en mémoire (${id}, page ${page})`)
+    const url = this.pages.get(id)?.[page]
+    if (url === undefined) throw new Error(`Page non disponible en mémoire (${id}, page ${page})`)
+    return url
   }
 
   async getLocator(id: string): Promise<Locator | null> {
