@@ -35,6 +35,26 @@ describe('TauriBridge', () => {
     invoke.mockReset()
   })
 
+  it('exécute les commandes de la bibliothèque dans l’ordre d’appel', async () => {
+    let finishSave!: () => void
+    invoke.mockImplementation((command: string) =>
+      command === 'save_locator'
+        ? new Promise<void>((resolve) => (finishSave = resolve))
+        : Promise.resolve(work({ progress: 0.67 })),
+    )
+    const bridge = new TauriBridge()
+    const saved = bridge.saveLocator('w1', { format: 'cbz', page: 3, progress: 0.67 })
+    const read = bridge.getWork('w1')
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledTimes(1))
+    // La lecture attend la fin de l'écriture appelée avant elle (#29).
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(invoke).toHaveBeenCalledTimes(1)
+    finishSave()
+    await saved
+    expect((await read)?.progress).toBe(0.67)
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual(['save_locator', 'get_work'])
+  })
+
   it('envoie les octets en binaire brut avec le nom en en-tête', async () => {
     invoke.mockResolvedValue({ status: 'imported', work: work() })
     const bytes = new Uint8Array([1, 2, 3])
