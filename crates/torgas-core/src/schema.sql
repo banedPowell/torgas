@@ -1,4 +1,5 @@
--- Schéma de la bibliothèque Torgas (version 1).
+-- Schéma de la bibliothèque Torgas (version 2), appliqué tel quel à une base neuve.
+-- Une base plus ancienne passe par les migrations de `migrations/` (voir `schema.rs`).
 -- Partagé entre le desktop (rusqlite) et le web (wa-sqlite).
 -- Identifiants : UUID v7 en TEXT. Dates : TEXT ISO 8601 UTC.
 -- Les clés étrangères supposent `PRAGMA foreign_keys = ON` côté connexion.
@@ -77,9 +78,10 @@ CREATE TABLE IF NOT EXISTS bookmark (
 CREATE INDEX IF NOT EXISTS bookmark_work_idx ON bookmark (work_id, created_at);
 
 -- Sessions de lecture : source de vérité du temps de lecture (et de l'XP plus tard).
+-- Elles survivent à la suppression de l'œuvre (`work_id` passe à NULL) : le temps lu reste acquis.
 CREATE TABLE IF NOT EXISTS reading_session (
     id              TEXT PRIMARY KEY NOT NULL,
-    work_id         TEXT NOT NULL REFERENCES work (id) ON DELETE CASCADE,
+    work_id         TEXT REFERENCES work (id) ON DELETE SET NULL,
     started_at      TEXT NOT NULL,
     ended_at        TEXT CHECK (ended_at IS NULL OR ended_at >= started_at),
     minutes         REAL NOT NULL DEFAULT 0 CHECK (minutes >= 0),
@@ -88,4 +90,4 @@ CREATE TABLE IF NOT EXISTS reading_session (
 );
 CREATE INDEX IF NOT EXISTS reading_session_work_idx ON reading_session (work_id, started_at);
 
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;

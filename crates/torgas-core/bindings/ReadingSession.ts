@@ -9,9 +9,9 @@ export type ReadingSession = {
  */
 id: string, 
 /**
- * Œuvre lue.
+ * Œuvre lue ; absente si l'œuvre a été supprimée depuis (la session reste comptée).
  */
-workId: string, 
+workId?: string, 
 /**
  * Début (ISO 8601).
  */

@@ -1,14 +1,14 @@
 //! Bibliothèque SQLite native (feature `sqlite`), utilisée par la coquille Tauri.
 //!
-//! Le web utilise le même [`SCHEMA_SQL`] via wa-sqlite ; ce module n'est
-//! compilé qu'en natif.
+//! Le web utilise le même [`crate::schema::SCHEMA_SQL`] (et les mêmes migrations) via
+//! wa-sqlite ; ce module n'est compilé qu'en natif.
 
 use std::path::Path;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::types::Type;
-use rusqlite::{Connection, OptionalExtension, Row, params};
+use rusqlite::{Connection, OptionalExtension, Row, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -18,6 +18,8 @@ use crate::model::{
     Bookmark, FINISHED_THRESHOLD, Locator, ReadingDirection, ReadingSession, ReadingStatus, Series,
     Work,
 };
+use crate::schema::upgrade_sql;
+#[cfg(test)]
 use crate::schema::{SCHEMA_SQL, SCHEMA_VERSION};
 
 /// Options d'insertion d'un fichier analysé.
@@ -55,6 +57,27 @@ impl ImportOutcome {
     }
 }
 
+/// Fichier d'une œuvre supprimée ([`Library::delete_works`]), à effacer par l'hôte.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RemovedFile {
+    /// Œuvre supprimée.
+    pub work_id: String,
+    /// Empreinte du fichier (nom de la miniature de couverture chez les hôtes).
+    pub sha256: String,
+    /// Emplacement local du fichier, s'il avait été copié.
+    pub path: Option<String>,
+    /// URL de la miniature de couverture enregistrée pour l'œuvre.
+    pub cover_url: Option<String>,
+}
+
+/// Liste d'identifiants passée en un seul paramètre, tableau JSON (`["a","b"]`).
+const IDS_PARAM: &str = "(SELECT value FROM json_each(?1))";
+
+/// Séries restées sans volume. Une série n'existe que par ses volumes (créée à l'import) :
+/// le ménage est global. Le pendant TypeScript est `DELETE_EMPTY_SERIES` (`web/sql.ts`).
+const DELETE_EMPTY_SERIES: &str =
+    "DELETE FROM series WHERE NOT EXISTS (SELECT 1 FROM work WHERE work.series_id = series.id)";
+
 /// Bibliothèque locale : une connexion SQLite au schéma appliqué.
 pub struct Library {
     conn: Connection,
@@ -81,20 +104,18 @@ impl Library {
         Self::from_connection(Connection::open_in_memory()?)
     }
 
-    /// Prend une connexion existante, active les clés étrangères et applique
-    /// le schéma si la base est vide.
-    pub fn from_connection(conn: Connection) -> Result<Self> {
+    /// Prend une connexion existante, active les clés étrangères, puis applique
+    /// le schéma (base vide) ou les migrations manquantes, en une transaction.
+    pub fn from_connection(mut conn: Connection) -> Result<Self> {
         conn.pragma_update(None, "foreign_keys", true)?;
-        let version: u32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
-        if version > SCHEMA_VERSION {
-            return Err(CoreError::SchemaTooNew {
-                found: version,
-                supported: SCHEMA_VERSION,
-            });
+        // Transaction immédiate : deux processus qui ouvrent la même base ne migrent
+        // pas deux fois (la version est relue sous verrou).
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let version: u32 = tx.pragma_query_value(None, "user_version", |row| row.get(0))?;
+        if let Some(script) = upgrade_sql(version)? {
+            tx.execute_batch(&script)?;
         }
-        if version < SCHEMA_VERSION {
-            conn.execute_batch(&format!("BEGIN;\n{SCHEMA_SQL}\nCOMMIT;"))?;
-        }
+        tx.commit()?;
         Ok(Self { conn })
     }
 
@@ -238,20 +259,37 @@ impl Library {
         )
     }
 
-    /// Supprime une œuvre et tout ce qui en dépend (fichier, position,
-    /// marque-pages, sessions). Renvoie les emplacements de fichiers à effacer.
-    pub fn remove_work(&mut self, work_id: &str) -> Result<Vec<String>> {
-        self.require_work(work_id)?;
+    /// Supprime des œuvres, en une transaction : la fiche, ses fichiers, son entrée de
+    /// bibliothèque, sa position et ses marque-pages (clés étrangères `ON DELETE CASCADE`),
+    /// puis les séries restées sans volume. Les sessions de lecture sont gardées, détachées
+    /// de l'œuvre (`work_id` à NULL) : le temps de lecture reste acquis.
+    ///
+    /// Les identifiants inconnus sont ignorés (œuvre déjà supprimée ailleurs). Renvoie les
+    /// fichiers des œuvres supprimées, que l'hôte efface du disque.
+    pub fn delete_works<S: AsRef<str>>(&mut self, ids: &[S]) -> Result<Vec<RemovedFile>> {
+        let ids = serde_json::to_string(&ids.iter().map(AsRef::as_ref).collect::<Vec<_>>())
+            .map_err(|err| CoreError::InvalidValue(err.to_string()))?;
         let tx = self.conn.transaction()?;
-        let paths = {
-            let mut stmt =
-                tx.prepare("SELECT path FROM file WHERE work_id = ?1 AND path IS NOT NULL")?;
-            stmt.query_map([work_id], |row| row.get(0))?
-                .collect::<rusqlite::Result<Vec<String>>>()?
+        let files = {
+            let mut stmt = tx.prepare(&format!(
+                "SELECT f.work_id, f.sha256, f.path, w.cover_url FROM file f
+                 JOIN work w ON w.id = f.work_id
+                 WHERE f.work_id IN {IDS_PARAM} ORDER BY f.work_id, f.added_at, f.id"
+            ))?;
+            stmt.query_map([&ids], |row| {
+                Ok(RemovedFile {
+                    work_id: row.get(0)?,
+                    sha256: row.get(1)?,
+                    path: row.get(2)?,
+                    cover_url: row.get(3)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?
         };
-        tx.execute("DELETE FROM work WHERE id = ?1", [work_id])?;
+        tx.execute(&format!("DELETE FROM work WHERE id IN {IDS_PARAM}"), [&ids])?;
+        tx.execute(DELETE_EMPTY_SERIES, [])?;
         tx.commit()?;
-        Ok(paths)
+        Ok(files)
     }
 
     /// Toutes les séries, par titre.
@@ -857,10 +895,19 @@ mod tests {
         assert!(lib.end_session("absente", 1.0, None).is_err());
     }
 
+    fn count(lib: &Library, table: &str) -> i64 {
+        lib.connection()
+            .query_row(&format!("SELECT count(*) FROM {table}"), [], |row| {
+                row.get(0)
+            })
+            .unwrap()
+    }
+
     #[test]
-    fn cover_url_and_removal_cascade() {
+    fn delete_cascades_and_keeps_reading_sessions() {
         let mut lib = library();
         let work = import(&mut lib, "Vol 1.cbz", &fixtures::cbz_p1_to_p12());
+        let other = import(&mut lib, "livre.epub", &fixtures::epub3());
         let updated = lib
             .set_cover_url(&work.id, Some("torgas://cover/abc"))
             .unwrap();
@@ -869,21 +916,112 @@ mod tests {
         lib.save_locator(&work.id, &cbz_locator(1, 0.2)).unwrap();
         lib.add_bookmark(&work.id, &cbz_locator(1, 0.2), "")
             .unwrap();
-        lib.start_session(&work.id).unwrap();
+        let session = lib.start_session(&work.id).unwrap();
+        lib.end_session(&session.id, 7.5, Some(0.2)).unwrap();
+        lib.start_session(&other.id).unwrap();
 
-        let paths = lib.remove_work(&work.id).unwrap();
-        assert_eq!(paths, ["/lib/Vol 1.cbz"]);
+        let removed = lib.delete_works(&[work.id.as_str(), "inconnue"]).unwrap();
+        assert_eq!(
+            removed,
+            [RemovedFile {
+                work_id: work.id.clone(),
+                sha256: work.sha256.clone(),
+                path: Some("/lib/Vol 1.cbz".to_owned()),
+                cover_url: Some("torgas://cover/abc".to_owned()),
+            }]
+        );
         assert_eq!(lib.get_work(&work.id).unwrap(), None);
-        let leftovers: i64 = lib
+        assert_eq!(lib.get_locator(&work.id).unwrap(), None);
+        assert_eq!(lib.list_bookmarks(&work.id).unwrap(), []);
+        assert_eq!(count(&lib, "file"), 1);
+        assert_eq!(count(&lib, "library_entry"), 1);
+
+        // Le temps de lecture reste acquis : la session est détachée, pas effacée.
+        let kept: (Option<String>, f64) = lib
             .connection()
             .query_row(
-                "SELECT (SELECT count(*) FROM file) + (SELECT count(*) FROM locator)
-                      + (SELECT count(*) FROM bookmark) + (SELECT count(*) FROM reading_session)",
-                [],
-                |row| row.get(0),
+                "SELECT work_id, minutes FROM reading_session WHERE id = ?1",
+                [&session.id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
             )
             .unwrap();
-        assert_eq!(leftovers, 0);
+        assert_eq!(kept, (None, 7.5));
+        assert_eq!(count(&lib, "reading_session"), 2);
+        assert_eq!(
+            lib.list_works().unwrap(),
+            [lib.get_work(&other.id).unwrap().unwrap()]
+        );
+
+        // Déjà supprimée : rien à faire, pas d'erreur.
+        assert_eq!(lib.delete_works(&[work.id]).unwrap(), []);
+        assert_eq!(lib.delete_works::<&str>(&[]).unwrap(), []);
+    }
+
+    #[test]
+    fn delete_removes_series_left_without_volumes() {
+        let mut lib = library();
+        let v1 = import(&mut lib, "Saga v01.cbz", &fixtures::cbz_p1_to_p12());
+        let v2 = import(&mut lib, "Saga v02.cbz", &fixtures::cbz_with_folders());
+        let series_id = v1.series_id.clone().unwrap();
+
+        lib.delete_works(&[&v1.id]).unwrap();
+        assert!(lib.get_series(&series_id).unwrap().is_some(), "reste le v2");
+
+        lib.delete_works(&[&v2.id]).unwrap();
+        assert_eq!(lib.get_series(&series_id).unwrap(), None);
+        assert_eq!(lib.list_series().unwrap(), []);
+
+        // Le réimport recrée l'œuvre (pas de doublon) et sa série.
+        let again = import(&mut lib, "Saga v01.cbz", &fixtures::cbz_p1_to_p12());
+        assert_ne!(again.id, v1.id);
+        assert_eq!(lib.list_series().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn deletes_several_works_at_once() {
+        let mut lib = library();
+        let a = import(&mut lib, "a.epub", &fixtures::epub_minimal());
+        let b = import(&mut lib, "b.epub", &fixtures::epub2());
+        let c = import(&mut lib, "c.epub", &fixtures::epub3());
+        let removed = lib.delete_works(&[&a.id, &c.id]).unwrap();
+        let mut ids: Vec<_> = removed.into_iter().map(|f| f.work_id).collect();
+        ids.sort();
+        let mut expected = vec![a.id, c.id];
+        expected.sort();
+        assert_eq!(ids, expected);
+        assert_eq!(lib.list_works().unwrap(), [b]);
+    }
+
+    #[test]
+    fn migrates_v1_keeping_reading_sessions() {
+        // Base en version 1 : `reading_session.work_id` en `NOT NULL … ON DELETE CASCADE`.
+        let v2_fk = "work_id         TEXT REFERENCES work (id) ON DELETE SET NULL,";
+        assert_eq!(SCHEMA_SQL.matches(v2_fk).count(), 1);
+        let v1_sql = SCHEMA_SQL
+            .replace(
+                v2_fk,
+                "work_id         TEXT NOT NULL REFERENCES work (id) ON DELETE CASCADE,",
+            )
+            .replace("PRAGMA user_version = 2;", "PRAGMA user_version = 1;");
+        let conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", true).unwrap();
+        conn.execute_batch(&v1_sql).unwrap();
+        let mut lib = Library { conn };
+        let work = import(&mut lib, "livre.epub", &fixtures::epub_minimal());
+        let session = lib.start_session(&work.id).unwrap();
+
+        let mut lib = Library::from_connection(lib.conn).unwrap();
+        let version: u32 = lib
+            .connection()
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, SCHEMA_VERSION);
+        assert_eq!(lib.list_sessions(&work.id).unwrap().len(), 1);
+
+        lib.delete_works(&[&work.id]).unwrap();
+        assert_eq!(count(&lib, "reading_session"), 1);
+        let ended = lib.end_session(&session.id, 3.0, Some(0.1)).unwrap();
+        assert_eq!(ended.work_id, None);
     }
 
     #[test]

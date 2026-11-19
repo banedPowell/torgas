@@ -56,6 +56,13 @@ pub fn schema_version() -> u32 {
     schema::SCHEMA_VERSION
 }
 
+/// Migrations d'une base existante, par version croissante : `[{ version, sql }]`.
+/// Une base vide reçoit directement `schemaSql()`.
+#[wasm_bindgen]
+pub fn migrations() -> Result<JsValue, JsError> {
+    to_js(&schema::MIGRATIONS)
+}
+
 /// Série et volume déduits d'un nom de fichier : `{ seriesTitle, volume }`,
 /// ou `undefined` si le nom ne contient pas de volume.
 #[wasm_bindgen(js_name = parseVolume)]
