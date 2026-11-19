@@ -8,8 +8,15 @@ export interface Statement {
   params?: SqlValue[]
 }
 
+/** Migration d'une base existante vers `version` (`torgas_core::schema::MIGRATIONS`). */
+export interface Migration {
+  version: number
+  sql: string
+}
+
 export type Request =
-  | { op: 'init'; schemaSql: string; schemaVersion: number }
+  /** Ouvre la base et l'amène à `schemaVersion` (schéma complet ou migrations manquantes). */
+  | { op: 'init'; schemaSql: string; schemaVersion: number; migrations: Migration[] }
   | { op: 'query'; sql: string; params?: SqlValue[] }
   /** Plusieurs écritures dans une seule transaction (tout ou rien). */
   | { op: 'batch'; statements: Statement[] }

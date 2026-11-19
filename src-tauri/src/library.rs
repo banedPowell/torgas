@@ -256,6 +256,48 @@ impl Desktop {
         })
     }
 
+    /// Supprime des œuvres (fiche, position, marque-pages ; les sessions de lecture restent),
+    /// puis leurs fichiers : le livre, s'il est rangé dans le dossier de la bibliothèque, et
+    /// sa miniature. Les identifiants inconnus sont ignorés.
+    ///
+    /// La base fait foi : une fois la suppression enregistrée, un fichier qui résiste
+    /// (verrouillé, déjà effacé) n'annule rien et reste sur le disque.
+    pub fn delete_works(&self, ids: &[String]) -> Result<()> {
+        let removed = self.library.lock()?.delete_works(ids)?;
+        {
+            let mut archives = self.archives.lock()?;
+            for id in ids {
+                archives.pop(id);
+            }
+        }
+        for file in removed {
+            if let Some(path) = file.path.as_deref() {
+                let _ = self.remove_book(Path::new(path));
+            }
+            let _ = fs::remove_file(self.cover_path(&file.sha256));
+        }
+        Ok(())
+    }
+
+    /// Efface un livre, seulement s'il est à l'intérieur du dossier de la bibliothèque (jamais
+    /// un fichier ailleurs sur le disque), puis son dossier (série ou auteur) s'il est vide.
+    fn remove_book(&self, path: &Path) -> Result<()> {
+        let root = self.library_dir.canonicalize()?;
+        let book = path.canonicalize()?;
+        if book == root || !book.starts_with(&root) || !book.is_file() {
+            return Err(DesktopError::BadRequest(format!(
+                "{} hors de la bibliothèque",
+                path.display()
+            )));
+        }
+        fs::remove_file(&book)?;
+        if let Some(dir) = book.parent().filter(|dir| *dir != root) {
+            // Échoue (sans conséquence) si le dossier contient encore des livres.
+            let _ = fs::remove_dir(dir);
+        }
+        Ok(())
+    }
+
     /// Dernière position de lecture.
     pub fn get_locator(&self, id: &str) -> Result<Option<Locator>> {
         Ok(self.library.lock()?.get_locator(id)?)
@@ -441,6 +483,59 @@ pub(crate) mod tests {
                 .code(),
             "not_found"
         );
+    }
+
+    #[test]
+    fn deletes_works_and_their_files() {
+        let (dir, desktop) = desktop();
+        let v1 = desktop
+            .import_file("Ma Serie v01.cbz", &cbz(2))
+            .work
+            .unwrap();
+        let v2 = desktop
+            .import_file("Ma Serie v02.cbz", &cbz(3))
+            .work
+            .unwrap();
+        let book = desktop
+            .import_file("x.epub", &epub("X", "Y", false))
+            .work
+            .unwrap();
+        let session = desktop.start_session(&v1.id).unwrap();
+        desktop.page(&v1.id, 0).unwrap();
+
+        desktop.delete_works(std::slice::from_ref(&v1.id)).unwrap();
+        let series_dir = dir.path().join("Torgas/Ma Serie");
+        assert!(!series_dir.join("Ma Serie v01.cbz").exists());
+        assert!(series_dir.join("Ma Serie v02.cbz").exists());
+        assert_eq!(desktop.cover(&v1.sha256).unwrap_err().code(), "not_found");
+        assert_eq!(desktop.page(&v1.id, 0).unwrap_err().code(), "not_found");
+        // La session reste ouverte et se clôt normalement : le temps lu est gardé.
+        desktop.end_session(&session, 4.0, 0.5).unwrap();
+
+        desktop
+            .delete_works(&[v2.id.clone(), book.id.clone(), "inconnue".to_owned()])
+            .unwrap();
+        assert!(!series_dir.exists(), "dossier de série vide retiré");
+        assert!(!dir.path().join("Torgas/Y").exists());
+        assert!(dir.path().join("Torgas").exists());
+        assert_eq!(desktop.list_works().unwrap(), Vec::new());
+        assert_eq!(desktop.list_series().unwrap(), Vec::new());
+
+        // Réimport du même fichier : nouvelle œuvre, pas un doublon.
+        let again = desktop.import_file("Ma Serie v01.cbz", &cbz(2));
+        assert_eq!(again.status, ImportStatus::Imported, "{again:?}");
+    }
+
+    #[test]
+    fn never_deletes_files_outside_the_library() {
+        let (dir, desktop) = desktop();
+        let outside = dir.path().join("ailleurs.epub");
+        fs::write(&outside, b"pas dans la bibliotheque").unwrap();
+        assert_eq!(desktop.remove_book(&outside).unwrap_err().code(), "invalid");
+        let sneaky = dir.path().join("Torgas/../ailleurs.epub");
+        assert!(desktop.remove_book(&sneaky).is_err());
+        assert!(desktop.remove_book(desktop.library_dir()).is_err());
+        assert!(outside.exists());
     }
 
     #[test]

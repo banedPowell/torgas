@@ -4,6 +4,9 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 const { t } = useI18n()
 const { counts, resume, ensureLoaded, dismissResume } = useLibrary()
 
+// Mode sélection de la bibliothèque : sa barre d'actions remplace « Reprendre ».
+const selection = useLibrarySelection()
+
 onMounted(ensureLoaded)
 
 // Phase 0 : seule la Bibliothèque existe ; les autres onglets viendront avec leurs écrans.
@@ -57,7 +60,7 @@ const items = computed<NavigationMenuItem[]>(() => [
            --resume-space réserve de quoi faire défiler la fin des listes sous elle. -->
       <div
         class="relative flex min-h-0 flex-1 flex-col"
-        :style="resume ? { '--resume-space': '5.5rem' } : undefined"
+        :style="resume || selection.active.value ? { '--resume-space': '5.5rem' } : undefined"
       >
         <slot />
 
@@ -66,9 +69,25 @@ const items = computed<NavigationMenuItem[]>(() => [
           leave-active-class="transition duration-150 ease-in"
           enter-from-class="translate-y-2 opacity-0"
           leave-to-class="translate-y-2 opacity-0"
+          mode="out-in"
         >
           <div
-            v-if="resume"
+            v-if="selection.active.value"
+            key="selection"
+            class="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-2 pb-2 lg:px-6 lg:pb-4"
+          >
+            <LibrarySelectionBar
+              :entries="selection.entries.value"
+              :count="selection.works.value.length"
+              :deleting="selection.deleting.value"
+              class="pointer-events-auto shadow-lg lg:mx-auto lg:max-w-xl"
+              @close="selection.stop"
+              @confirm="selection.deleteSelected"
+            />
+          </div>
+          <div
+            v-else-if="resume"
+            key="resume"
             class="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-2 pb-2 lg:px-6 lg:pb-4"
           >
             <ResumeBar

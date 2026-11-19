@@ -87,6 +87,7 @@ pub fn run() {
             commands::list_series,
             commands::set_status,
             commands::set_series_direction,
+            commands::delete_works,
             commands::get_book_bytes,
             commands::get_locator,
             commands::save_locator,

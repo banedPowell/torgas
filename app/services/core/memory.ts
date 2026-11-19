@@ -13,7 +13,8 @@ import { statusAfterProgress } from './status'
 
 interface Session {
   id: string
-  workId: string
+  /** `null` une fois l'œuvre supprimée : la session reste (temps de lecture acquis). */
+  workId: string | null
   startedAt: string
   endedAt?: string
   minutes?: number
@@ -103,6 +104,24 @@ export class MemoryBridge implements CoreBridge {
     series.direction = direction
   }
 
+  async deleteWorks(ids: string[]): Promise<void> {
+    const removed = new Set(ids.filter((id) => this.works.has(id)))
+    for (const id of removed) {
+      this.works.delete(id)
+      this.files.delete(id)
+      this.locators.delete(id)
+      this.pages.delete(id)
+    }
+    for (const [key, bookmark] of this.bookmarks) {
+      if (removed.has(bookmark.workId)) this.bookmarks.delete(key)
+    }
+    for (const session of this.sessions.values()) {
+      if (session.workId && removed.has(session.workId)) session.workId = null
+    }
+    const used = new Set([...this.works.values()].map((w) => w.seriesId))
+    for (const id of this.series.keys()) if (!used.has(id)) this.series.delete(id)
+  }
+
   async getBookBytes(id: string): Promise<Uint8Array> {
     const bytes = this.files.get(id)
     if (!bytes) throw new Error(`Fichier absent : ${id}`)
@@ -164,7 +183,7 @@ export class MemoryBridge implements CoreBridge {
   }
 
   /** Sessions de lecture d'une œuvre (pour les tests : le contrat ne les expose pas). */
-  sessionsOf(workId: string): Session[] {
+  sessionsOf(workId: string | null): Session[] {
     return [...this.sessions.values()].filter((s) => s.workId === workId).map((s) => ({ ...s }))
   }
 

@@ -68,7 +68,17 @@
       "action": "Réessayer"
     },
     "loading": "Chargement de la bibliothèque",
-    "options": "Support, tri et affichage"
+    "options": "Support, tri et affichage",
+    "selection": {
+      "start": "Sélectionner",
+      "startLabel": "Sélectionner des œuvres",
+      "stop": "Terminé",
+      "toolbar": "Actions sur la sélection",
+      "count": "Aucune sélection | {n} sélectionné | {n} sélectionnés",
+      "select": "Sélectionner {title}",
+      "close": "Quitter la sélection",
+      "delete": "Supprimer"
+    }
   },
   "resume": {
     "label": "Reprendre",
@@ -140,6 +150,23 @@
       "missingFile": "Fichier manquant",
       "incomplete": "Série incomplète : volume {list} manquant | Série incomplète : volumes {list} manquants"
     }
+  },
+  "deletion": {
+    "menu": "Plus d'actions",
+    "action": "Supprimer de la bibliothèque",
+    "title": "Supprimer « {title} » ?",
+    "description": "La fiche, le fichier, ta position et tes marque-pages disparaissent de cet appareil. Ton temps de lecture reste acquis.",
+    "seriesDescription": "Le volume de la série, son fichier, ta position et tes marque-pages disparaissent de cet appareil. Ton temps de lecture reste acquis. | Les {n} volumes de la série, leurs fichiers, tes positions et tes marque-pages disparaissent de cet appareil. Ton temps de lecture reste acquis.",
+    "batchTitle": "Supprimer {n} ouvrage ? | Supprimer {n} ouvrages ?",
+    "batchDescription": "{list} disparaît de cet appareil, fiche et fichier compris. Ton temps de lecture reste acquis. | {list} disparaissent de cet appareil, fiches et fichiers compris. Ton temps de lecture reste acquis.",
+    "seriesItem": "{title} ({n} vol.)",
+    "others": "{n} autres",
+    "cancel": "Annuler",
+    "confirm": "Supprimer",
+    "confirmMany": "Supprimer | Supprimer les {n}",
+    "done": "« {title} » supprimé de la bibliothèque",
+    "doneMany": "{n} ouvrages supprimés de la bibliothèque",
+    "error": "Impossible de supprimer"
   },
   "reader": {
     "close": "Quitter le lecteur",

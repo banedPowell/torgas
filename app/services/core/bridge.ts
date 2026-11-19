@@ -21,6 +21,13 @@ export interface CoreBridge {
   listSeries(): Promise<Series[]>
   setStatus(id: string, status: ReadingStatus): Promise<void>
   setSeriesDirection(seriesId: string, direction: ReadingDirection): Promise<void>
+  /**
+   * Supprime des œuvres de cet appareil, en une opération (tout ou rien côté base) : fiche,
+   * fichier, couverture, position et marque-pages ; les séries restées sans volume aussi.
+   * Les sessions de lecture sont gardées (le temps lu reste acquis). Les identifiants inconnus
+   * sont ignorés.
+   */
+  deleteWorks(ids: string[]): Promise<void>
   getBookBytes(id: string): Promise<Uint8Array>
   getPageUrl(id: string, page: number): Promise<string>
   getLocator(id: string): Promise<Locator | null>

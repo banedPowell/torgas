@@ -11,7 +11,8 @@ import * as SQLite from '@journeyapps/wa-sqlite'
 import SQLiteESMFactory from '@journeyapps/wa-sqlite/dist/wa-sqlite.mjs'
 import { OPFSCoopSyncVFS } from '@journeyapps/wa-sqlite/src/examples/OPFSCoopSyncVFS.js'
 import wasmUrl from '@journeyapps/wa-sqlite/dist/wa-sqlite.wasm?url'
-import type { Request, Response, Row, SqlValue } from './protocol'
+import { upgradeScript } from './migrations'
+import type { Migration, Request, Response, Row, SqlValue } from './protocol'
 
 const DB_NAME = 'torgas.sqlite3'
 const DB_DIR = 'db'
@@ -46,7 +47,11 @@ function splitPath(path: string): [string, string] {
   return [path.slice(0, Math.max(index, 0)), path.slice(index + 1)]
 }
 
-async function open(schemaSql: string, schemaVersion: number): Promise<void> {
+async function open(
+  schemaSql: string,
+  schemaVersion: number,
+  migrations: Migration[],
+): Promise<void> {
   if (sqlite3) return
   const module = await SQLiteESMFactory({ locateFile: () => wasmUrl })
   const api = SQLite.Factory(module)
@@ -57,12 +62,21 @@ async function open(schemaSql: string, schemaVersion: number): Promise<void> {
   db = await api.open_v2(DB_NAME)
   sqlite3 = api
   await api.exec(db, 'PRAGMA foreign_keys = ON')
-  const [row] = await query('PRAGMA user_version')
-  const version = Number(row?.user_version ?? 0)
-  if (version > schemaVersion) {
-    throw new Error(`Schéma en version ${version}, version ${schemaVersion} au plus attendue`)
+  // Version relue sous verrou d'écriture : deux onglets ouverts ensemble ne migrent pas deux fois.
+  await api.exec(db, 'BEGIN IMMEDIATE')
+  try {
+    const [row] = await query('PRAGMA user_version')
+    const script = upgradeScript(Number(row?.user_version ?? 0), {
+      schemaSql,
+      schemaVersion,
+      migrations,
+    })
+    if (script) await api.exec(db, script)
+    await api.exec(db, 'COMMIT')
+  } catch (error) {
+    await api.exec(db, 'ROLLBACK').catch(() => {})
+    throw error
   }
-  if (version < schemaVersion) await api.exec(db, `BEGIN;\n${schemaSql}\nCOMMIT;`)
 }
 
 function api(): SQLiteAPI {
@@ -124,7 +138,7 @@ async function removeFile(path: string): Promise<void> {
 async function handle(request: Request): Promise<Row[] | undefined> {
   switch (request.op) {
     case 'init':
-      return void (await open(request.schemaSql, request.schemaVersion))
+      return void (await open(request.schemaSql, request.schemaVersion, request.migrations))
     case 'query':
       return query(request.sql, request.params)
     case 'batch':

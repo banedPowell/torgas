@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampProgress, formatAuthors, formatPercent } from '~/utils/format'
+import { clampProgress, formatAuthors, formatPercent, formatTitleList } from '~/utils/format'
 import { compareRecentFirst, naturalCompare } from '~/utils/sort'
 
 describe('format', () => {
@@ -20,6 +20,13 @@ describe('format', () => {
     expect(formatAuthors(['Flaubert'])).toBe('Flaubert')
     expect(formatAuthors(['Erckmann', ' Chatrian '])).toBe('Erckmann et Chatrian')
     expect(formatAuthors(['A', 'B', 'C'])).toBe('A, B et C')
+  })
+
+  it('joint les titres et résume les suivants', () => {
+    const others = (n: number) => `${n} autres`
+    expect(formatTitleList(['A'], others)).toBe('A')
+    expect(formatTitleList(['A', 'B', 'C', 'D'], others)).toBe('A, B, C et D')
+    expect(formatTitleList(['A', 'B', 'C', 'D', 'E'], others)).toBe('A, B, C et 2 autres')
   })
 })
 

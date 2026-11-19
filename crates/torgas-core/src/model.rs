@@ -218,8 +218,9 @@ pub struct Bookmark {
 pub struct ReadingSession {
     /// Identifiant (UUID v7).
     pub id: String,
-    /// Œuvre lue.
-    pub work_id: String,
+    /// Œuvre lue ; absente si l'œuvre a été supprimée depuis (la session reste comptée).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub work_id: Option<String>,
     /// Début (ISO 8601).
     pub started_at: String,
     /// Fin (ISO 8601), absente tant que la session est ouverte.

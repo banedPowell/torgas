@@ -54,6 +54,13 @@ export class LruCache<K, V> {
     return true
   }
 
+  /** Supprime (et libère) les entrées dont la clé vérifie `match` ; renvoie leur nombre. */
+  deleteWhere(match: (key: K) => boolean): number {
+    const keys = [...this.entries.keys()].filter(match)
+    for (const key of keys) this.delete(key)
+    return keys.length
+  }
+
   clear(): void {
     const all = [...this.entries]
     this.entries.clear()

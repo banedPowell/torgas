@@ -150,6 +150,59 @@ test.describe('CBZ : série en deux volumes', () => {
   })
 })
 
+test.describe('Supprimer un ouvrage', () => {
+  test('supprime depuis la fiche puis réimporte sans doublon', async ({ page }) => {
+    await openLibrary(page)
+    await importFile(page, epub)
+    await expect(workCard(page, EPUB_TITLE)).toBeVisible()
+
+    await workCard(page, EPUB_TITLE).click()
+    await expect(page).toHaveURL(/\/works\//)
+    await page.getByRole('button', { name: "Plus d'actions" }).click()
+    await page.getByRole('menuitem', { name: 'Supprimer de la bibliothèque' }).click()
+    const dialog = page.getByRole('dialog', { name: `Supprimer « ${EPUB_TITLE} » ?` })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByText('Ton temps de lecture reste acquis.')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Supprimer' }).click()
+
+    // Retour à la bibliothèque, vide ; la suppression tient au rechargement (OPFS + SQLite).
+    await expect(page).toHaveURL(/\/$/)
+    await expect(
+      page.getByText(`« ${EPUB_TITLE} » supprimé de la bibliothèque`, { exact: true }),
+    ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Ta bibliothèque est vide' })).toBeVisible()
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'Ta bibliothèque est vide' })).toBeVisible()
+
+    await importFile(page, epub)
+    await expect(workCard(page, EPUB_TITLE)).toBeVisible()
+    await expect(page.getByText('déjà dans ta bibliothèque')).toBeHidden()
+  })
+
+  test('supprime une sélection depuis la bibliothèque', async ({ page }) => {
+    await openLibrary(page)
+    await importFile(page, epub)
+    await expect(workCard(page, EPUB_TITLE)).toBeVisible()
+    await importFile(page, cbz)
+    await expect(workCard(page, CBZ_TITLE)).toBeVisible()
+
+    await page.getByRole('button', { name: 'Sélectionner', exact: true }).click()
+    await page.getByRole('checkbox', { name: `Sélectionner ${EPUB_TITLE}` }).click()
+    await page.getByRole('checkbox', { name: `Sélectionner ${CBZ_TITLE}` }).click()
+    const toolbar = page.getByRole('toolbar', { name: 'Actions sur la sélection' })
+    await expect(toolbar.getByText('2 sélectionnés')).toBeVisible()
+    await toolbar.getByRole('button', { name: 'Supprimer' }).click()
+
+    const dialog = page.getByRole('dialog', { name: 'Supprimer 2 ouvrages ?' })
+    await dialog.getByRole('button', { name: 'Supprimer les 2' }).click()
+    await expect(
+      page.getByText('2 ouvrages supprimés de la bibliothèque', { exact: true }),
+    ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Ta bibliothèque est vide' })).toBeVisible()
+    await expect(toolbar).toBeHidden()
+  })
+})
+
 test.describe('Thème sombre', () => {
   test("bascule en sombre dans l'app puis dans le lecteur", async ({ page }) => {
     await openLibrary(page)

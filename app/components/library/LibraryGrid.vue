@@ -5,7 +5,12 @@ const props = defineProps<{
   entries: readonly LibraryEntry[]
   /** Liste virtualisée (au-delà de VIRTUAL_LIST_THRESHOLD entrées). */
   virtualized?: boolean
+  /** Mode sélection : les cartes se cochent (identifiants d'entrée cochés dans `selected`). */
+  selecting?: boolean
+  selected?: ReadonlySet<string>
 }>()
+
+const emit = defineEmits<{ toggle: [id: string] }>()
 
 const MIN_CARD = 132
 const GAP_X = 18
@@ -51,7 +56,14 @@ const { list, containerProps, wrapperProps } = useVirtualList(rows, {
             gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
           }"
         >
-          <WorkCard v-for="entry in row.data" :key="entry.id" :entry="entry" />
+          <WorkCard
+            v-for="entry in row.data"
+            :key="entry.id"
+            :entry="entry"
+            :selectable="selecting"
+            :selected="selected?.has(entry.id)"
+            @toggle="emit('toggle', $event)"
+          />
         </li>
       </ul>
     </div>
@@ -60,7 +72,12 @@ const { list, containerProps, wrapperProps } = useVirtualList(rows, {
       class="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(132px,1fr))] sm:gap-x-[18px] sm:gap-y-[22px]"
     >
       <li v-for="entry in entries" :key="entry.id">
-        <WorkCard :entry="entry" />
+        <WorkCard
+          :entry="entry"
+          :selectable="selecting"
+          :selected="selected?.has(entry.id)"
+          @toggle="emit('toggle', $event)"
+        />
       </li>
     </ul>
   </div>

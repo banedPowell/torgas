@@ -97,6 +97,12 @@ pub async fn set_series_direction(
     .await
 }
 
+/// Supprime des œuvres et leurs fichiers de la bibliothèque (identifiants inconnus ignorés).
+#[tauri::command]
+pub async fn delete_works(state: DesktopState<'_>, ids: Vec<String>) -> Result<()> {
+    blocking(&state, move |d| d.delete_works(&ids)).await
+}
+
 /// Contenu du fichier d'une œuvre, en réponse binaire (`ArrayBuffer` côté JS).
 #[tauri::command]
 pub async fn get_book_bytes(state: DesktopState<'_>, id: String) -> Result<Response> {

@@ -66,7 +66,6 @@ pub enum CoreError {
     Sqlite(#[from] rusqlite::Error),
 
     /// La base a été créée par une version plus récente de Torgas.
-    #[cfg(feature = "sqlite")]
     #[error("schéma de base en version {found}, version {supported} au plus attendue")]
     SchemaTooNew {
         /// Version trouvée dans la base.

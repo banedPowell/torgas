@@ -1,7 +1,7 @@
 import type { CbzArchive } from 'torgas-wasm'
 import type { CoreBridge } from './bridge'
 import { DbClient } from './web/db-client'
-import type { Row, SqlValue } from './web/protocol'
+import type { Migration, Row, SqlValue } from './web/protocol'
 import * as Sql from './web/sql'
 import { importErrorStatus, loadWasm, type CoreWasm } from './web/wasm'
 import type {
@@ -74,7 +74,11 @@ export class WebBridge implements CoreBridge {
   async init(): Promise<void> {
     this.db = new DbClient()
     this.wasm = await loadWasm()
-    await this.db.init(this.wasm.schemaSql(), this.wasm.schemaVersion())
+    await this.db.init(
+      this.wasm.schemaSql(),
+      this.wasm.schemaVersion(),
+      this.wasm.migrations() as Migration[],
+    )
   }
 
   async importFile(name: string, bytes: Uint8Array): Promise<ImportResult> {
@@ -112,6 +116,28 @@ export class WebBridge implements CoreBridge {
     return this.queue.run(async () => {
       const rows = await this.db.query(Sql.SET_SERIES_DIRECTION, [seriesId, direction])
       if (rows.length === 0) throw notFound('série', seriesId)
+    })
+  }
+
+  async deleteWorks(ids: string[]): Promise<void> {
+    if (!ids.length) return
+    await this.queue.run(async () => {
+      const param = JSON.stringify(ids)
+      const files = await this.db.query(Sql.DELETED_FILES, [param])
+      await this.db.batch([
+        { sql: Sql.DELETE_WORKS, params: [param] },
+        { sql: Sql.DELETE_EMPTY_SERIES },
+      ])
+      // La base fait foi : un fichier OPFS qui résiste n'annule pas la suppression.
+      for (const id of ids) this.forgetWork(id)
+      const paths = files.flatMap((row) => [row.path, row.cover_url])
+      await Promise.all(
+        paths.map((path) => {
+          if (typeof path !== 'string' || !path) return undefined
+          this.forgetCover(path)
+          return this.db.removeFile(path).catch(() => {})
+        }),
+      )
     })
   }
 
@@ -290,6 +316,12 @@ export class WebBridge implements CoreBridge {
     this.forgetCover(path)
     await this.db.writeFile(path, thumbnail.bytes)
     return path
+  }
+
+  /** Libère l'archive ouverte et révoque les blob URL des pages d'une œuvre supprimée. */
+  private forgetWork(id: string): void {
+    this.archives.delete(id)
+    this.pageUrls.deleteWhere((key) => key.startsWith(`${id}:`))
   }
 
   private forgetCover(path: string): void {
