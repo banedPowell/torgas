@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -13,6 +15,18 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   css: ['~/assets/css/main.css'],
+
+  // Types générés depuis Rust (ts-rs) : `app/types/core.ts` les ré-exporte.
+  alias: {
+    '#core-bindings': fileURLToPath(new URL('../crates/torgas-core/bindings', import.meta.url)),
+  },
+
+  vite: {
+    // Le worker SQLite importe wa-sqlite (wasm) : format ES pour le découpage en modules.
+    worker: { format: 'es' },
+    // Modules wasm chargés par `new URL(…, import.meta.url)` : pas de pré-bundling.
+    optimizeDeps: { exclude: ['@journeyapps/wa-sqlite', 'torgas-wasm'] },
+  },
 
   components: [{ path: '~/components', pathPrefix: false }],
 
