@@ -4,14 +4,13 @@ import {
   importFile,
   openFromLibrary,
   openLibrary,
+  readerExactPercent,
   readerPercent,
+  resumeLink,
   turnPage,
   waitForBook,
   workCard,
 } from './helpers'
-
-/** Intervalle minimal entre deux sauvegardes de la position d'un CBZ (`useComicReader`). */
-const COMIC_SAVE_INTERVAL = 2000
 
 const epub = makeEpub()
 const cbz = makeCbz()
@@ -37,14 +36,13 @@ test.describe('EPUB : importer, lire, rouvrir', () => {
     await expect(progress).toBeVisible()
     const position = await progress.getAttribute('aria-valuetext')
     expect(position).not.toBe(start)
+    const percent = await readerExactPercent(page)
 
     await page.getByRole('button', { name: 'Quitter le lecteur' }).click()
     await expect(page).toHaveURL(/\/works\//)
 
-    // Juste après la fermeture, la fiche peut encore afficher « Lire » : sa lecture de la
-    // bibliothèque peut précéder l'écriture de la position (course observée, voir la PR).
-    // Le lecteur, lui, relit la position enregistrée : c'est elle qu'on vérifie.
-    await page.getByRole('link', { name: /^(Lire|Reprendre à)/ }).click()
+    // Dès le retour, la fiche affiche la progression enregistrée à la fermeture (#29).
+    await resumeLink(page, percent).click()
     await expect(page).toHaveURL(/\/read\//)
     await expect.poll(() => readerPercent(page)).toBe(position)
   })
@@ -76,20 +74,38 @@ test.describe('CBZ : importer, lire, recharger, rouvrir', () => {
       await expect(page.getByRole('img', { name: `Page ${n} sur ${CBZ_PAGES}` })).toBeVisible()
     }
     await expect(page.getByText(`4 / ${CBZ_PAGES}`)).toBeVisible()
-    // La position est enregistrée au plus toutes les 2 s : on laisse passer la sauvegarde différée.
-    await page.waitForTimeout(COMIC_SAVE_INTERVAL + 500)
 
+    // Sans attendre la sauvegarde différée : la fermeture enregistre la position (#29, #30).
     await page.getByRole('button', { name: 'Fermer le lecteur' }).click()
     await expect(page).toHaveURL(/\/works\//)
+    await expect(resumeLink(page, '67 %')).toBeVisible()
 
-    // Rechargement complet du navigateur : la bibliothèque (OPFS + SQLite) est toujours là.
+    // Rechargement complet aussitôt : la bibliothèque (OPFS + SQLite) et la position sont là.
     await page.reload()
+    await expect(resumeLink(page, '67 %')).toBeVisible()
     await page.getByRole('link', { name: 'Retour à la bibliothèque' }).click()
     await expect(workCard(page, CBZ_TITLE)).toBeVisible()
 
     await openFromLibrary(page, CBZ_TITLE)
     await expect(page.getByRole('img', { name: `Page 4 sur ${CBZ_PAGES}` })).toBeVisible()
     await expect(page.getByText(`4 / ${CBZ_PAGES}`)).toBeVisible()
+  })
+
+  test('recharger pendant la lecture garde la dernière page', async ({ page }) => {
+    await openLibrary(page)
+    await importFile(page, cbz)
+    await openFromLibrary(page, CBZ_TITLE)
+    await expect(page.getByRole('img', { name: `Page 1 sur ${CBZ_PAGES}` })).toBeVisible()
+    for (let n = 2; n <= 3; n++) {
+      await page.keyboard.press('ArrowRight')
+      await expect(page.getByRole('img', { name: `Page ${n} sur ${CBZ_PAGES}` })).toBeVisible()
+    }
+
+    // La page 3 n'est pas encore dans SQLite (sauvegarde différée) : la copie locale la garde.
+    await page.reload()
+    await expect(page.getByRole('img', { name: `Page 3 sur ${CBZ_PAGES}` })).toBeVisible()
+    await page.getByRole('button', { name: 'Fermer le lecteur' }).click()
+    await expect(resumeLink(page, '50 %')).toBeVisible()
   })
 })
 

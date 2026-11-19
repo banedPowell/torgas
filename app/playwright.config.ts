@@ -1,12 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 4173
+const PORT = Number(process.env.E2E_PORT ?? 4173)
 const baseURL = `http://127.0.0.1:${PORT}`
 const viewport = { width: 1280, height: 800 }
 
 /**
  * Tests de bout en bout sur le build statique (`nuxt generate`, SPA) servi par `e2e/serve.mjs`.
- * `E2E_SKIP_BUILD=1` réutilise le dernier `.output/public` (itérations locales).
+ * `E2E_SKIP_BUILD=1` réutilise le dernier `.output/public` (itérations locales) ; `E2E_PORT`
+ * change le port (plusieurs copies du dépôt testées en même temps).
  * Chaque test reçoit un contexte de navigateur neuf : OPFS et localStorage vides.
  */
 export default defineConfig({
